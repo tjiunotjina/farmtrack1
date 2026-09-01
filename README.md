@@ -48,3 +48,11 @@ This is an MVP-quality build meant to prove the architecture end-to-end, not a p
 - **Auth:** JWT + bcrypt is solid, but there's no password reset, email verification, or multi-user-per-farm roles yet (e.g. owner + workers with different permissions).
 - **Hosting:** needs a real host for the backend (Render, Railway, Fly.io, etc.) and a build/deploy for the frontend (Vercel, Netlify, or bundled into a Capacitor app for app-store distribution).
 - **Photos:** animal photos aren't wired up yet — worth adding since farmers often want a visual record.
+
+## Getting future updates
+
+This project is a git repo (`git log` to see history). When changes come from
+a Claude chat session as a diff or patch, apply them with `git apply` (or ask
+Claude Code, if you have it, to apply the change directly) instead of
+re-downloading and swapping the whole folder — much faster once the project
+is this size.
