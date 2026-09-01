@@ -1,0 +1,241 @@
+import React, { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { Syringe, Baby, Check, ClipboardList, Wallet, BadgeDollarSign, X } from 'lucide-react';
+import { db, saveLocal } from '../db.js';
+import { TopBar, EarTag, StockTag, statusColor } from '../components/Shell.jsx';
+
+export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncStatus, pending, onSyncTap }) {
+  const [showSaleForm, setShowSaleForm] = useState(false);
+  const animal = useLiveQuery(() => db.animals.get(animalId), [animalId], null);
+  const mother = useLiveQuery(() => animal?.motherId ? db.animals.get(animal.motherId) : null, [animal?.motherId], null);
+  const offspring = useLiveQuery(
+    () => db.animals.filter(a => a.motherId === animalId && !a.deleted).toArray(),
+    [animalId],
+    []
+  );
+  const relatedTasks = useLiveQuery(
+    () => db.tasks.filter(t => t.animalId === animalId && !t.deleted).toArray(),
+    [animalId],
+    []
+  );
+  const relatedLedger = useLiveQuery(
+    () => db.ledger.filter(l => l.animalId === animalId && !l.deleted).toArray(),
+    [animalId],
+    []
+  );
+
+  if (!animal) return null;
+
+  const logHealthEvent = async () => {
+    await saveLocal('animals', { ...animal, lastVax: new Date().toISOString().slice(0, 10), status: 'Healthy' });
+  };
+  const logBreedingEvent = async () => {
+    await saveLocal('animals', { ...animal, status: 'Pregnant' });
+  };
+  const toggleTaskDone = async (t) => {
+    await saveLocal('tasks', { ...t, done: !t.done });
+  };
+
+  return (
+    <div className="flex flex-col h-full relative">
+      <TopBar title="Animal record" onBack={onBack} syncStatus={syncStatus} pending={pending} onSyncTap={onSyncTap} />
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
+        {animal.images?.length > 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            {animal.images.map((img, i) => (
+              <div key={i} className="aspect-square rounded-lg overflow-hidden border border-border">
+                <img src={img} alt="" className="w-full h-full object-cover" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="bg-white rounded-lg border border-border p-4">
+          <EarTag id={animal.id} />
+          <div className="font-serif text-xl text-ink mt-2">{animal.breed} {animal.species}</div>
+          <span className={`inline-block text-[10px] font-medium px-2 py-1 rounded-full mt-2 ${statusColor[animal.status] || 'bg-muted text-white'}`}>
+            {animal.status}
+          </span>
+        </div>
+
+        <div className="bg-white rounded-lg border border-border divide-y divide-parchment">
+          {[
+            ['Sex', animal.sex],
+            ['Age', animal.age],
+            ['Weight', animal.weight],
+            ['Stock brand', animal.brand],
+            ['Feed', animal.feed],
+            ['Last vaccination', animal.lastVax],
+          ].map(([k, v]) => (
+            <div key={k} className="flex justify-between px-4 py-2.5 text-[13px]">
+              <span className="text-muted">{k}</span>
+              <span className="text-ink font-medium">{v || '—'}</span>
+            </div>
+          ))}
+          {mother && (
+            <button onClick={() => onSelectAnimal(mother.id)} className="w-full flex justify-between px-4 py-2.5 text-[13px]">
+              <span className="text-muted">Mother</span>
+              <span className="text-teal font-medium">{mother.id}</span>
+            </button>
+          )}
+        </div>
+
+        {offspring.length > 0 && (
+          <div>
+            <div className="text-[11px] text-muted mb-2 uppercase tracking-wide">Offspring</div>
+            <div className="space-y-2">
+              {offspring.map(child => (
+                <button
+                  key={child.id}
+                  onClick={() => onSelectAnimal(child.id)}
+                  className="w-full text-left bg-white rounded-lg border border-border p-2.5 flex items-center justify-between"
+                >
+                  <div>
+                    <EarTag id={child.id} size="sm" />
+                    <div className="text-[12px] text-ink mt-1">{child.breed} · {child.age}</div>
+                  </div>
+                  <span className={`text-[10px] font-medium px-2 py-1 rounded-full ${statusColor[child.status] || 'bg-muted text-white'}`}>{child.status}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(relatedTasks.length > 0 || relatedLedger.length > 0) && (
+          <div className="space-y-3">
+            {relatedTasks.length > 0 && (
+              <div>
+                <div className="text-[11px] text-muted mb-2 uppercase tracking-wide flex items-center gap-1.5">
+                  <ClipboardList size={12} /> Related tasks
+                </div>
+                <div className="space-y-2">
+                  {relatedTasks.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => toggleTaskDone(t)}
+                      className="w-full text-left bg-white rounded-lg border border-border p-2.5 flex items-center gap-2"
+                    >
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${t.done ? 'bg-forest border-forest' : 'border-border'}`}>
+                        {t.done && <Check size={10} className="text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <div className={`text-[12px] ${t.done ? 'line-through text-muted' : 'text-ink'}`}>{t.title}</div>
+                        <div className="text-[10px] text-muted">{t.due}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {relatedLedger.length > 0 && (
+              <div>
+                <div className="text-[11px] text-muted mb-2 uppercase tracking-wide flex items-center gap-1.5">
+                  <Wallet size={12} /> Related transactions
+                </div>
+                <div className="space-y-2">
+                  {relatedLedger.map(l => (
+                    <div key={l.id} className="bg-white rounded-lg border border-border p-2.5 flex items-center justify-between">
+                      <div>
+                        <div className="text-[12px] text-ink">{l.desc}</div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-muted">{l.date}</span>
+                          {l.inventoryName && <StockTag name={l.inventoryName} size="sm" />}
+                        </div>
+                      </div>
+                      <span className={`text-[12px] font-medium ${l.type === 'income' ? 'text-forest' : 'text-rust'}`}>
+                        {l.type === 'income' ? '+' : '-'}N${l.amount.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {animal.status !== 'Sold' && (
+          <button onClick={logHealthEvent} className="w-full flex items-center justify-center gap-2 bg-forest text-white rounded-lg py-2.5 text-[13px] font-medium">
+            <Syringe size={15} /> Log health event
+          </button>
+        )}
+        {animal.status !== 'Sold' && (
+          <button onClick={logBreedingEvent} className="w-full flex items-center justify-center gap-2 bg-white border border-border text-ink rounded-lg py-2.5 text-[13px] font-medium">
+            <Baby size={15} /> Log breeding event
+          </button>
+        )}
+        {animal.status !== 'Sold' ? (
+          <button onClick={() => setShowSaleForm(true)} className="w-full flex items-center justify-center gap-2 bg-leather text-white rounded-lg py-2.5 text-[13px] font-medium">
+            <BadgeDollarSign size={15} /> Log sale
+          </button>
+        ) : (
+          <div className="text-center text-[12px] text-muted py-1">This animal is marked as sold.</div>
+        )}
+      </div>
+      {showSaleForm && <SaleForm animal={animal} onClose={() => setShowSaleForm(false)} />}
+    </div>
+  );
+}
+
+function SaleForm({ animal, onClose }) {
+  const [amount, setAmount] = useState('');
+  const [buyer, setBuyer] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!amount) return;
+
+    await saveLocal('ledger', {
+      id: crypto.randomUUID(),
+      desc: `Sold ${animal.breed || animal.species} ${animal.id}${buyer ? ` to ${buyer}` : ''}`,
+      amount: Number(amount),
+      type: 'income',
+      date,
+      animalId: animal.id,
+      inventoryId: null,
+      inventoryName: null,
+    });
+    await saveLocal('animals', { ...animal, status: 'Sold' });
+    onClose();
+  };
+
+  return (
+    <div className="absolute inset-0 bg-ink/40 flex items-end">
+      <div className="w-full bg-parchment rounded-t-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-lg text-ink">Log sale — {animal.id}</h2>
+          <button onClick={onClose}><X size={18} className="text-muted" /></button>
+        </div>
+        <p className="text-[12px] text-muted">
+          This adds an income entry to Finances and marks the animal as sold.
+        </p>
+        <form onSubmit={submit} className="space-y-3">
+          <label className="block">
+            <span className="text-[11px] text-muted">Sale amount (N$)</span>
+            <input
+              type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required
+              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">Buyer (optional)</span>
+            <input
+              value={buyer} onChange={(e) => setBuyer(e.target.value)} placeholder="e.g. Meatco, private buyer"
+              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">Date</span>
+            <input
+              type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+            />
+          </label>
+          <button type="submit" className="w-full bg-leather text-white rounded-lg py-2.5 text-[13px] font-medium mt-2">
+            Confirm sale
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
