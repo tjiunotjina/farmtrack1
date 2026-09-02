@@ -1,11 +1,11 @@
 import React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, TrendingUp, TrendingDown, Package, LogOut } from 'lucide-react';
+import { AlertTriangle, TrendingUp, TrendingDown, Package, LogOut, Syringe } from 'lucide-react';
 import { db } from '../db.js';
-import { TopBar } from '../components/Shell.jsx';
+import { TopBar, EarTag } from '../components/Shell.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
-export default function Home({ syncStatus, pending, onSyncTap }) {
+export default function Home({ syncStatus, pending, onSyncTap, onSelectAnimal }) {
   const { session, logout } = useAuth();
   const animals = useLiveQuery(() => db.animals.filter(a => !a.deleted).toArray(), [], []);
   const inventory = useLiveQuery(() => db.inventory.filter(i => !i.deleted).toArray(), [], []);
@@ -18,6 +18,14 @@ export default function Home({ syncStatus, pending, onSyncTap }) {
   const income = ledger.filter(l => l.type === 'income').reduce((s, l) => s + l.amount, 0);
   const expense = ledger.filter(l => l.type === 'expense').reduce((s, l) => s + l.amount, 0);
   const todayTasks = tasks.filter(t => t.due === 'Today');
+
+  // Flatten every animal's vaccination history into one farm-wide feed,
+  // most recent first — so a farmer can see at a glance what's been given
+  // without opening each animal individually.
+  const recentVaccinations = animals
+    .flatMap(a => (a.vaccinations || []).map(v => ({ ...v, animalId: a.id })))
+    .sort((a, b) => (a.date < b.date ? 1 : -1))
+    .slice(0, 6);
 
   return (
     <div className="flex flex-col h-full">
@@ -78,6 +86,29 @@ export default function Home({ syncStatus, pending, onSyncTap }) {
             ))}
           </div>
         </div>
+
+        {recentVaccinations.length > 0 && (
+          <div>
+            <div className="text-[11px] text-muted mb-2 uppercase tracking-wide flex items-center gap-1.5">
+              <Syringe size={12} /> Recent vaccinations
+            </div>
+            <div className="space-y-2">
+              {recentVaccinations.map((v, i) => (
+                <button
+                  key={i}
+                  onClick={() => onSelectAnimal(v.animalId)}
+                  className="w-full bg-white rounded-lg border border-border p-2.5 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <EarTag id={v.animalId} size="sm" />
+                    <span className="text-[12px] text-ink">{v.name}</span>
+                  </div>
+                  <span className="text-[11px] text-muted">{v.date}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

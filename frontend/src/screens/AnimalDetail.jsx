@@ -6,6 +6,7 @@ import { TopBar, EarTag, StockTag, statusColor } from '../components/Shell.jsx';
 
 export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncStatus, pending, onSyncTap }) {
   const [showSaleForm, setShowSaleForm] = useState(false);
+  const [showVaxForm, setShowVaxForm] = useState(false);
   const animal = useLiveQuery(() => db.animals.get(animalId), [animalId], null);
   const mother = useLiveQuery(() => animal?.motherId ? db.animals.get(animal.motherId) : null, [animal?.motherId], null);
   const offspring = useLiveQuery(
@@ -26,15 +27,17 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
 
   if (!animal) return null;
 
-  const logHealthEvent = async () => {
-    await saveLocal('animals', { ...animal, lastVax: new Date().toISOString().slice(0, 10), status: 'Healthy' });
-  };
   const logBreedingEvent = async () => {
     await saveLocal('animals', { ...animal, status: 'Pregnant' });
   };
   const toggleTaskDone = async (t) => {
     await saveLocal('tasks', { ...t, done: !t.done });
   };
+
+  const born = animal.birthMonth || animal.birthYear
+    ? [animal.birthMonth, animal.birthYear].filter(Boolean).join(' ')
+    : null;
+  const vaccinations = [...(animal.vaccinations || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
 
   return (
     <div className="flex flex-col h-full relative">
@@ -62,6 +65,7 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
           {[
             ['Sex', animal.sex],
             ['Age', animal.age],
+            ['Born', born],
             ['Weight', animal.weight],
             ['Stock brand', animal.brand],
             ['Feed', animal.feed],
@@ -79,6 +83,22 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
             </button>
           )}
         </div>
+
+        {vaccinations.length > 0 && (
+          <div>
+            <div className="text-[11px] text-muted mb-2 uppercase tracking-wide flex items-center gap-1.5">
+              <Syringe size={12} /> Vaccination history
+            </div>
+            <div className="space-y-2">
+              {vaccinations.map((v, i) => (
+                <div key={i} className="bg-white rounded-lg border border-border p-2.5 flex items-center justify-between">
+                  <span className="text-[12px] text-ink">{v.name}</span>
+                  <span className="text-[11px] text-muted">{v.date}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {offspring.length > 0 && (
           <div>
@@ -154,8 +174,8 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
         )}
 
         {animal.status !== 'Sold' && (
-          <button onClick={logHealthEvent} className="w-full flex items-center justify-center gap-2 bg-forest text-white rounded-lg py-2.5 text-[13px] font-medium">
-            <Syringe size={15} /> Log health event
+          <button onClick={() => setShowVaxForm(true)} className="w-full flex items-center justify-center gap-2 bg-forest text-white rounded-lg py-2.5 text-[13px] font-medium">
+            <Syringe size={15} /> Log vaccination
           </button>
         )}
         {animal.status !== 'Sold' && (
@@ -172,6 +192,50 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
         )}
       </div>
       {showSaleForm && <SaleForm animal={animal} onClose={() => setShowSaleForm(false)} />}
+      {showVaxForm && <VaccinationForm animal={animal} onClose={() => setShowVaxForm(false)} />}
+    </div>
+  );
+}
+
+function VaccinationForm({ animal, onClose }) {
+  const [name, setName] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!name) return;
+    const vaccinations = [...(animal.vaccinations || []), { name, date }];
+    await saveLocal('animals', { ...animal, vaccinations, lastVax: date, status: animal.status === 'Sick' ? 'Sick' : 'Healthy' });
+    onClose();
+  };
+
+  return (
+    <div className="absolute inset-0 bg-ink/40 flex items-end">
+      <div className="w-full bg-parchment rounded-t-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-lg text-ink">Log vaccination — {animal.id}</h2>
+          <button onClick={onClose}><X size={18} className="text-muted" /></button>
+        </div>
+        <form onSubmit={submit} className="space-y-3">
+          <label className="block">
+            <span className="text-[11px] text-muted">Vaccine name</span>
+            <input
+              value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. Clostridial (Multivax P Plus)"
+              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">Date</span>
+            <input
+              type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+            />
+          </label>
+          <button type="submit" className="w-full bg-forest text-parchment rounded-lg py-2.5 text-[13px] font-medium mt-2">
+            Save vaccination
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Search, Plus, X, Baby } from 'lucide-react';
+import { Search, Plus, X, Baby, Syringe } from 'lucide-react';
 import { db, saveLocal } from '../db.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { TopBar, EarTag, statusColor } from '../components/Shell.jsx';
 import ImageSlots from '../components/ImageSlots.jsx';
 
 export const SPECIES = ['Cattle', 'Goat', 'Sheep', 'Chicken', 'Pig', 'Horse', 'Donkey', 'Rabbit', 'Other'];
+export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal }) {
   const [query, setQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [prefillMother, setPrefillMother] = useState(null);
+  const [showVaxAll, setShowVaxAll] = useState(false);
   const animals = useLiveQuery(() => db.animals.filter(a => !a.deleted).toArray(), [], []);
 
   const filtered = animals.filter(a =>
@@ -27,7 +29,7 @@ export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal
   return (
     <div className="flex flex-col h-full relative">
       <TopBar title="Animals" syncStatus={syncStatus} pending={pending} onSyncTap={onSyncTap} />
-      <div className="px-4 pb-3">
+      <div className="px-4 pb-3 space-y-2">
         <div className="flex items-center gap-2 bg-white border border-border rounded-lg px-3 py-2">
           <Search size={14} className="text-muted" />
           <input
@@ -37,6 +39,12 @@ export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal
             className="text-[13px] flex-1 outline-none bg-transparent placeholder:text-muted"
           />
         </div>
+        <button
+          onClick={() => setShowVaxAll(true)}
+          className="w-full flex items-center justify-center gap-2 bg-white border border-teal text-teal rounded-lg py-2 text-[12px] font-medium"
+        >
+          <Syringe size={13} /> Vaccinate all animals
+        </button>
       </div>
       <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
         {topLevel.length === 0 && <div className="text-[12px] text-muted text-center pt-8">No animals yet. Tap + to add one.</div>}
@@ -69,11 +77,13 @@ export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal
           onClose={() => { setShowForm(false); setPrefillMother(null); }}
         />
       )}
+      {showVaxAll && <VaccinateAllForm animals={animals} onClose={() => setShowVaxAll(false)} />}
     </div>
   );
 }
 
 function AnimalRow({ animal, onSelect, compact }) {
+  const birth = animal.birthMonth && animal.birthYear ? `${animal.birthMonth.slice(0, 3)} ${animal.birthYear}` : null;
   return (
     <button
       onClick={() => onSelect(animal.id)}
@@ -85,7 +95,10 @@ function AnimalRow({ animal, onSelect, compact }) {
         )}
         <div>
           <EarTag id={animal.id} size={compact ? 'sm' : 'md'} />
-          <div className="text-[13px] text-ink mt-1">{animal.breed} · {animal.sex} · {animal.age}</div>
+          <div className="text-[13px] text-ink mt-1">
+            {animal.breed} · {animal.sex} · {animal.age}
+            {birth && <span className="text-muted"> · b. {birth}</span>}
+          </div>
         </div>
       </div>
       <span className={`text-[10px] font-medium px-2 py-1 rounded-full ${statusColor[animal.status] || 'bg-muted text-white'}`}>{animal.status}</span>
@@ -95,10 +108,12 @@ function AnimalRow({ animal, onSelect, compact }) {
 
 function AddAnimalForm({ animals, prefillMother, onClose }) {
   const { session } = useAuth();
+  const currentYear = new Date().getFullYear();
   const [form, setForm] = useState({
     id: '', species: prefillMother?.species || 'Cattle', breed: prefillMother?.breed || '',
     sex: 'Female', age: '', status: 'Healthy', weight: '', feed: '', motherId: prefillMother?.id || '',
     brand: prefillMother?.brand || session?.farm?.stock_brand || '',
+    birthMonth: '', birthYear: '',
   });
   const [images, setImages] = useState([]);
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
@@ -112,8 +127,10 @@ function AddAnimalForm({ animals, prefillMother, onClose }) {
     await saveLocal('animals', {
       ...form,
       motherId: form.motherId || null,
+      birthYear: form.birthYear ? Number(form.birthYear) : null,
       images,
-      lastVax: new Date().toISOString().slice(0, 10),
+      vaccinations: [],
+      lastVax: null,
     });
     onClose();
   };
@@ -136,6 +153,22 @@ function AddAnimalForm({ animals, prefillMother, onClose }) {
           <div className="grid grid-cols-2 gap-3">
             <Field label="Age" value={form.age} onChange={set('age')} placeholder="e.g. 2y, 3mo" />
             <Field label="Weight" value={form.weight} onChange={set('weight')} placeholder="e.g. 210kg" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-[11px] text-muted">Birth month</span>
+              <select value={form.birthMonth} onChange={set('birthMonth')} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+                <option value="">Unknown</option>
+                {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-[11px] text-muted">Birth year</span>
+              <select value={form.birthYear} onChange={set('birthYear')} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+                <option value="">Unknown</option>
+                {Array.from({ length: 25 }, (_, i) => currentYear - i).map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </label>
           </div>
           <Select label="Status" value={form.status} onChange={set('status')} options={['Healthy', 'Vax due', 'Pregnant', 'Sick']} />
           <Field label="Stock brand" value={form.brand} onChange={set('brand')} placeholder="e.g. OF/24" />
@@ -166,6 +199,47 @@ function AddAnimalForm({ animals, prefillMother, onClose }) {
 
           <button type="submit" className="w-full bg-forest text-parchment rounded-lg py-2.5 text-[13px] font-medium mt-2">
             Save animal
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function VaccinateAllForm({ animals, onClose }) {
+  const [vaccine, setVaccine] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [busy, setBusy] = useState(false);
+
+  const eligible = animals.filter(a => a.status !== 'Sold');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!vaccine) return;
+    setBusy(true);
+    await Promise.all(eligible.map(a => {
+      const vaccinations = [...(a.vaccinations || []), { name: vaccine, date }];
+      return saveLocal('animals', { ...a, vaccinations, lastVax: date, status: a.status === 'Sick' ? 'Sick' : 'Healthy' });
+    }));
+    setBusy(false);
+    onClose();
+  };
+
+  return (
+    <div className="absolute inset-0 bg-ink/40 flex items-end">
+      <div className="w-full bg-parchment rounded-t-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-lg text-ink">Vaccinate all animals</h2>
+          <button onClick={onClose}><X size={18} className="text-muted" /></button>
+        </div>
+        <p className="text-[12px] text-muted">
+          Records this vaccine for all {eligible.length} active animal{eligible.length === 1 ? '' : 's'} (sold animals are skipped).
+        </p>
+        <form onSubmit={submit} className="space-y-3">
+          <Field label="Vaccine name" value={vaccine} onChange={(e) => setVaccine(e.target.value)} required placeholder="e.g. Clostridial (Multivax P Plus)" />
+          <Field label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <button type="submit" disabled={busy} className="w-full bg-teal text-white rounded-lg py-2.5 text-[13px] font-medium mt-2 disabled:opacity-60">
+            {busy ? 'Applying…' : `Vaccinate ${eligible.length} animals`}
           </button>
         </form>
       </div>
