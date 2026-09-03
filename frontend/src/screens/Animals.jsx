@@ -26,6 +26,15 @@ export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal
   const topLevel = filtered.filter(a => !a.motherId);
   const childrenOf = (id) => animals.filter(a => a.motherId === id && !a.deleted);
 
+  // Group by species — known species render in a fixed order (matching the
+  // add-animal picker) so the list doesn't reshuffle as animals are added;
+  // any custom/unlisted species values sort after, alphabetically.
+  const presentSpecies = [...new Set(topLevel.map(a => a.species || 'Other'))];
+  const orderedSpecies = [
+    ...SPECIES.filter(s => presentSpecies.includes(s)),
+    ...presentSpecies.filter(s => !SPECIES.includes(s)).sort(),
+  ];
+
   return (
     <div className="flex flex-col h-full relative">
       <TopBar title="Animals" syncStatus={syncStatus} pending={pending} onSyncTap={onSyncTap} />
@@ -46,26 +55,39 @@ export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal
           <Syringe size={13} /> Vaccinate all animals
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-5">
         {topLevel.length === 0 && <div className="text-[12px] text-muted text-center pt-8">No animals yet. Tap + to add one.</div>}
-        {topLevel.map(a => (
-          <div key={a.id} className="space-y-1.5">
-            <AnimalRow animal={a} onSelect={onSelectAnimal} />
-            {childrenOf(a.id).length > 0 && (
-              <div className="pl-4 border-l-2 border-border ml-3 space-y-1.5">
-                {childrenOf(a.id).map(child => (
-                  <AnimalRow key={child.id} animal={child} onSelect={onSelectAnimal} compact />
+        {orderedSpecies.map(species => {
+          const group = topLevel.filter(a => (a.species || 'Other') === species);
+          return (
+            <div key={species}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[11px] text-muted uppercase tracking-wide">{species}</span>
+                <span className="text-[10px] text-muted bg-white border border-border rounded-full px-1.5 py-0.5">{group.length}</span>
+              </div>
+              <div className="space-y-1.5">
+                {group.map(a => (
+                  <div key={a.id} className="space-y-1.5">
+                    <AnimalRow animal={a} onSelect={onSelectAnimal} />
+                    {childrenOf(a.id).length > 0 && (
+                      <div className="pl-4 border-l-2 border-border ml-3 space-y-1.5">
+                        {childrenOf(a.id).map(child => (
+                          <AnimalRow key={child.id} animal={child} onSelect={onSelectAnimal} compact />
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => { setPrefillMother(a); setShowForm(true); }}
+                      className="ml-3 flex items-center gap-1 text-[11px] text-teal pl-1"
+                    >
+                      <Baby size={12} /> Add newborn under {a.id}
+                    </button>
+                  </div>
                 ))}
               </div>
-            )}
-            <button
-              onClick={() => { setPrefillMother(a); setShowForm(true); }}
-              className="ml-3 flex items-center gap-1 text-[11px] text-teal pl-1"
-            >
-              <Baby size={12} /> Add newborn under {a.id}
-            </button>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
       <button onClick={() => { setPrefillMother(null); setShowForm(true); }} className="absolute bottom-4 right-4 bg-forest text-white rounded-full p-3 shadow-lg">
         <Plus size={20} />
@@ -130,6 +152,7 @@ function AddAnimalForm({ animals, prefillMother, onClose }) {
       birthYear: form.birthYear ? Number(form.birthYear) : null,
       images,
       vaccinations: [],
+      treatments: [],
       lastVax: null,
     });
     onClose();
@@ -209,9 +232,11 @@ function AddAnimalForm({ animals, prefillMother, onClose }) {
 function VaccinateAllForm({ animals, onClose }) {
   const [vaccine, setVaccine] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [species, setSpecies] = useState('All');
   const [busy, setBusy] = useState(false);
 
-  const eligible = animals.filter(a => a.status !== 'Sold');
+  const presentSpecies = [...new Set(animals.map(a => a.species || 'Other'))];
+  const eligible = animals.filter(a => a.status !== 'Sold' && (species === 'All' || (a.species || 'Other') === species));
 
   const submit = async (e) => {
     e.preventDefault();
@@ -232,12 +257,19 @@ function VaccinateAllForm({ animals, onClose }) {
           <h2 className="font-serif text-lg text-ink">Vaccinate all animals</h2>
           <button onClick={onClose}><X size={18} className="text-muted" /></button>
         </div>
-        <p className="text-[12px] text-muted">
-          Records this vaccine for all {eligible.length} active animal{eligible.length === 1 ? '' : 's'} (sold animals are skipped).
-        </p>
         <form onSubmit={submit} className="space-y-3">
+          <label className="block">
+            <span className="text-[11px] text-muted">Animal type</span>
+            <select value={species} onChange={(e) => setSpecies(e.target.value)} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+              <option value="All">All types</option>
+              {presentSpecies.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
           <Field label="Vaccine name" value={vaccine} onChange={(e) => setVaccine(e.target.value)} required placeholder="e.g. Clostridial (Multivax P Plus)" />
           <Field label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <p className="text-[12px] text-muted">
+            Applies to {eligible.length} {species === 'All' ? 'active animal' : species.toLowerCase()}{eligible.length === 1 ? '' : 's'} (sold animals are skipped).
+          </p>
           <button type="submit" disabled={busy} className="w-full bg-teal text-white rounded-lg py-2.5 text-[13px] font-medium mt-2 disabled:opacity-60">
             {busy ? 'Applying…' : `Vaccinate ${eligible.length} animals`}
           </button>

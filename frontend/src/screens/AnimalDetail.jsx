@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Syringe, Baby, Check, ClipboardList, Wallet, BadgeDollarSign, X } from 'lucide-react';
+import { Syringe, Stethoscope, Check, ClipboardList, Wallet, BadgeDollarSign, X } from 'lucide-react';
 import { db, saveLocal } from '../db.js';
 import { TopBar, EarTag, StockTag, statusColor } from '../components/Shell.jsx';
 
 export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncStatus, pending, onSyncTap }) {
   const [showSaleForm, setShowSaleForm] = useState(false);
   const [showVaxForm, setShowVaxForm] = useState(false);
+  const [showTreatmentForm, setShowTreatmentForm] = useState(false);
   const animal = useLiveQuery(() => db.animals.get(animalId), [animalId], null);
   const mother = useLiveQuery(() => animal?.motherId ? db.animals.get(animal.motherId) : null, [animal?.motherId], null);
   const offspring = useLiveQuery(
@@ -27,9 +28,6 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
 
   if (!animal) return null;
 
-  const logBreedingEvent = async () => {
-    await saveLocal('animals', { ...animal, status: 'Pregnant' });
-  };
   const toggleTaskDone = async (t) => {
     await saveLocal('tasks', { ...t, done: !t.done });
   };
@@ -38,6 +36,7 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
     ? [animal.birthMonth, animal.birthYear].filter(Boolean).join(' ')
     : null;
   const vaccinations = [...(animal.vaccinations || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const treatments = [...(animal.treatments || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
 
   return (
     <div className="flex flex-col h-full relative">
@@ -83,6 +82,25 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
             </button>
           )}
         </div>
+
+        {treatments.length > 0 && (
+          <div>
+            <div className="text-[11px] text-muted mb-2 uppercase tracking-wide flex items-center gap-1.5">
+              <Stethoscope size={12} /> Sickness &amp; treatment history
+            </div>
+            <div className="space-y-2">
+              {treatments.map((t, i) => (
+                <div key={i} className="bg-white rounded-lg border border-border p-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] text-ink font-medium">{t.condition}</span>
+                    <span className="text-[11px] text-muted">{t.date}</span>
+                  </div>
+                  {t.treatment && <div className="text-[11px] text-muted mt-0.5">Treated with: {t.treatment}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {vaccinations.length > 0 && (
           <div>
@@ -179,8 +197,8 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
           </button>
         )}
         {animal.status !== 'Sold' && (
-          <button onClick={logBreedingEvent} className="w-full flex items-center justify-center gap-2 bg-white border border-border text-ink rounded-lg py-2.5 text-[13px] font-medium">
-            <Baby size={15} /> Log breeding event
+          <button onClick={() => setShowTreatmentForm(true)} className="w-full flex items-center justify-center gap-2 bg-white border border-rust text-rust rounded-lg py-2.5 text-[13px] font-medium">
+            <Stethoscope size={15} /> Log sickness / treatment
           </button>
         )}
         {animal.status !== 'Sold' ? (
@@ -193,6 +211,7 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
       </div>
       {showSaleForm && <SaleForm animal={animal} onClose={() => setShowSaleForm(false)} />}
       {showVaxForm && <VaccinationForm animal={animal} onClose={() => setShowVaxForm(false)} />}
+      {showTreatmentForm && <TreatmentForm animal={animal} onClose={() => setShowTreatmentForm(false)} />}
     </div>
   );
 }
@@ -233,6 +252,62 @@ function VaccinationForm({ animal, onClose }) {
           </label>
           <button type="submit" className="w-full bg-forest text-parchment rounded-lg py-2.5 text-[13px] font-medium mt-2">
             Save vaccination
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function TreatmentForm({ animal, onClose }) {
+  const [condition, setCondition] = useState('');
+  const [treatment, setTreatment] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [recovered, setRecovered] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!condition) return;
+    const treatments = [...(animal.treatments || []), { condition, treatment, date }];
+    await saveLocal('animals', { ...animal, treatments, status: recovered ? 'Healthy' : 'Sick' });
+    onClose();
+  };
+
+  return (
+    <div className="absolute inset-0 bg-ink/40 flex items-end">
+      <div className="w-full bg-parchment rounded-t-2xl p-4 space-y-3 max-h-[88%] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-lg text-ink">Log sickness / treatment — {animal.id}</h2>
+          <button onClick={onClose}><X size={18} className="text-muted" /></button>
+        </div>
+        <form onSubmit={submit} className="space-y-3">
+          <label className="block">
+            <span className="text-[11px] text-muted">Condition / symptom</span>
+            <input
+              value={condition} onChange={(e) => setCondition(e.target.value)} required placeholder="e.g. Foot rot, bloat, coughing"
+              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">Treatment given (optional)</span>
+            <input
+              value={treatment} onChange={(e) => setTreatment(e.target.value)} placeholder="e.g. Terramycin injection"
+              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">Date</span>
+            <input
+              type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-[13px] text-ink">
+            <input type="checkbox" checked={recovered} onChange={(e) => setRecovered(e.target.checked)} className="w-4 h-4" />
+            Animal has recovered (marks as Healthy)
+          </label>
+          <button type="submit" className="w-full bg-rust text-white rounded-lg py-2.5 text-[13px] font-medium mt-2">
+            Save entry
           </button>
         </form>
       </div>
