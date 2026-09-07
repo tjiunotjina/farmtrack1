@@ -1,4 +1,9 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+// Local dev (`npm run dev`) talks to the standalone backend/server.js on
+// :4000 by default. A production build (what `netlify build` runs) defaults
+// to '' — a relative path — so /api/* hits the same Netlify site's own
+// function via the redirect in netlify.toml, no separate host needed.
+// VITE_API_URL always overrides both, if you want to point at something else.
+const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:4000');
 
 async function request(path, { method = 'GET', body, token } = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {

@@ -1,0 +1,23 @@
+[build]
+  # Installs the function's dependencies (root package.json) and builds the
+  # frontend, in one command — Netlify runs this from the repo root.
+  command = "npm install && cd frontend && npm install && npm run build"
+  publish = "frontend/dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# API calls go to the serverless function, same-origin — no CORS, no
+# separate host to configure.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# Everything else falls through to the SPA — client-side routing (and a
+# hard refresh on any screen) needs this or you'll get Netlify's 404 page.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
