@@ -5,9 +5,8 @@ import { db, saveLocal } from '../db.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { TopBar, EarTag, statusColor } from '../components/Shell.jsx';
 import ImageSlots from '../components/ImageSlots.jsx';
-
-export const SPECIES = ['Cattle', 'Goat', 'Sheep', 'Chicken', 'Pig', 'Horse', 'Donkey', 'Rabbit', 'Other'];
-export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+import { SPECIES, MONTHS } from '../constants.js';
+import { calcAge } from '../ageUtils.js';
 
 export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal }) {
   const [query, setQuery] = useState('');
@@ -105,6 +104,8 @@ export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal
 }
 
 function AnimalRow({ animal, onSelect, compact }) {
+  const computedAge = calcAge(animal.birthYear, animal.birthMonth);
+  const ageLabel = computedAge || animal.age;
   const birth = animal.birthMonth && animal.birthYear ? `${animal.birthMonth.slice(0, 3)} ${animal.birthYear}` : null;
   return (
     <button
@@ -118,7 +119,7 @@ function AnimalRow({ animal, onSelect, compact }) {
         <div>
           <EarTag id={animal.id} size={compact ? 'sm' : 'md'} />
           <div className="text-[13px] text-ink mt-1">
-            {animal.breed} · {animal.sex} · {animal.age}
+            {animal.breed} · {animal.sex}{ageLabel ? ` · ${ageLabel}` : ''}
             {birth && <span className="text-muted"> · b. {birth}</span>}
           </div>
         </div>
@@ -174,10 +175,6 @@ function AddAnimalForm({ animals, prefillMother, onClose }) {
           </div>
           <Field label="Breed" value={form.breed} onChange={set('breed')} />
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Age" value={form.age} onChange={set('age')} placeholder="e.g. 2y, 3mo" />
-            <Field label="Weight" value={form.weight} onChange={set('weight')} placeholder="e.g. 210kg" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="text-[11px] text-muted">Birth month</span>
               <select value={form.birthMonth} onChange={set('birthMonth')} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
@@ -192,6 +189,10 @@ function AddAnimalForm({ animals, prefillMother, onClose }) {
                 {Array.from({ length: 25 }, (_, i) => currentYear - i).map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </label>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Age (if birth date unknown)" value={form.age} onChange={set('age')} placeholder="e.g. 2y, 3mo" />
+            <Field label="Weight" value={form.weight} onChange={set('weight')} placeholder="e.g. 210kg" />
           </div>
           <Select label="Status" value={form.status} onChange={set('status')} options={['Healthy', 'Vax due', 'Pregnant', 'Sick']} />
           <Field label="Stock brand" value={form.brand} onChange={set('brand')} placeholder="e.g. OF/24" />

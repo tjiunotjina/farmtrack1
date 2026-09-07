@@ -7,7 +7,7 @@ import { nanoid } from 'nanoid';
 import { getUser, setUser, getFarm, setFarm, getFarmData, setFarmData } from './db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
-const COLLECTIONS = ['animals', 'inventory', 'ledger', 'tasks'];
+const COLLECTIONS = ['animals', 'inventory', 'ledger', 'tasks', 'farmers'];
 
 const app = express();
 app.use(cors());
@@ -74,7 +74,7 @@ router.post('/auth/register', asyncRoute(async (req, res) => {
 
   await setFarm(farm.id, farm);
   await setUser(email, user);
-  await setFarmData(farm.id, { animals: [], inventory: [], ledger: [], tasks: [] });
+  await setFarmData(farm.id, { animals: [], inventory: [], ledger: [], tasks: [], farmers: [] });
 
   res.status(201).json({ token: sign(user), farm, user: { id: user.id, email: user.email, role: user.role } });
 }));

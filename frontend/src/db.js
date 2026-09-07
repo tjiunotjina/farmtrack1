@@ -14,7 +14,18 @@ db.version(1).stores({
   tasks: 'id, dirty, updated_at',
 });
 
-export const COLLECTIONS = ['animals', 'inventory', 'ledger', 'tasks'];
+// v2 adds farmers (the people working the farm — not login accounts, just
+// a roster: name, role, phone). New Dexie version required to add a table.
+db.version(2).stores({
+  meta: 'key',
+  animals: 'id, dirty, updated_at',
+  inventory: 'id, dirty, updated_at',
+  ledger: 'id, dirty, updated_at',
+  tasks: 'id, dirty, updated_at',
+  farmers: 'id, dirty, updated_at',
+});
+
+export const COLLECTIONS = ['animals', 'inventory', 'ledger', 'tasks', 'farmers'];
 
 export async function getMeta(key) {
   const row = await db.meta.get(key);

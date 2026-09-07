@@ -3,7 +3,7 @@ import { nanoid } from 'nanoid';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
-const COLLECTIONS = ['animals', 'inventory', 'ledger', 'tasks'];
+const COLLECTIONS = ['animals', 'inventory', 'ledger', 'tasks', 'farmers'];
 
 function makeRouter(collection) {
   const router = Router();

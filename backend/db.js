@@ -17,6 +17,7 @@ const defaultData = {
   inventory: [],
   ledger: [],
   tasks: [],
+  farmers: [],      // roster of people working the farm — name, role, phone
 };
 
 export const db = new Low(adapter, defaultData);
@@ -24,5 +25,10 @@ export const db = new Low(adapter, defaultData);
 export async function initDb() {
   await db.read();
   db.data ||= structuredClone(defaultData);
+  // Fill in any keys added since a given data.json was first created —
+  // an existing file won't get new collections automatically otherwise.
+  for (const key of Object.keys(defaultData)) {
+    db.data[key] ||= structuredClone(defaultData[key]);
+  }
   await db.write();
 }

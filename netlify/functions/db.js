@@ -23,7 +23,7 @@ export async function setFarm(farmId, farm) {
   await store().setJSON(`farms/${farmId}`, farm);
 }
 
-const EMPTY_FARM_DATA = { animals: [], inventory: [], ledger: [], tasks: [] };
+const EMPTY_FARM_DATA = { animals: [], inventory: [], ledger: [], tasks: [], farmers: [] };
 
 export async function getFarmData(farmId) {
   const data = await store().get(`data/${farmId}`, { type: 'json' });

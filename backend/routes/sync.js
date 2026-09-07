@@ -3,7 +3,7 @@ import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
-const COLLECTIONS = ['animals', 'inventory', 'ledger', 'tasks'];
+const COLLECTIONS = ['animals', 'inventory', 'ledger', 'tasks', 'farmers'];
 
 router.use(requireAuth);
 

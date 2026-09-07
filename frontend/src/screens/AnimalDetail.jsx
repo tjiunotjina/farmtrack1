@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Syringe, Stethoscope, Check, ClipboardList, Wallet, BadgeDollarSign, X } from 'lucide-react';
+import { Syringe, Stethoscope, Check, ClipboardList, Wallet, BadgeDollarSign, HeartPulse, X } from 'lucide-react';
 import { db, saveLocal } from '../db.js';
 import { TopBar, EarTag, StockTag, statusColor } from '../components/Shell.jsx';
+import { calcAge } from '../ageUtils.js';
 
 export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncStatus, pending, onSyncTap }) {
   const [showSaleForm, setShowSaleForm] = useState(false);
@@ -35,8 +36,14 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
   const born = animal.birthMonth || animal.birthYear
     ? [animal.birthMonth, animal.birthYear].filter(Boolean).join(' ')
     : null;
+  const computedAge = calcAge(animal.birthYear, animal.birthMonth);
   const vaccinations = [...(animal.vaccinations || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
   const treatments = [...(animal.treatments || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  const markRecovered = async () => {
+    const treatments = [...(animal.treatments || []), { condition: 'Recovered', treatment: '', date: new Date().toISOString().slice(0, 10) }];
+    await saveLocal('animals', { ...animal, treatments, status: 'Healthy' });
+  };
 
   return (
     <div className="flex flex-col h-full relative">
@@ -63,7 +70,7 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
         <div className="bg-white rounded-lg border border-border divide-y divide-parchment">
           {[
             ['Sex', animal.sex],
-            ['Age', animal.age],
+            ['Age', computedAge || animal.age],
             ['Born', born],
             ['Weight', animal.weight],
             ['Stock brand', animal.brand],
@@ -130,7 +137,7 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
                 >
                   <div>
                     <EarTag id={child.id} size="sm" />
-                    <div className="text-[12px] text-ink mt-1">{child.breed} · {child.age}</div>
+                    <div className="text-[12px] text-ink mt-1">{child.breed} · {calcAge(child.birthYear, child.birthMonth) || child.age}</div>
                   </div>
                   <span className={`text-[10px] font-medium px-2 py-1 rounded-full ${statusColor[child.status] || 'bg-muted text-white'}`}>{child.status}</span>
                 </button>
@@ -191,6 +198,11 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
           </div>
         )}
 
+        {animal.status === 'Sick' && (
+          <button onClick={markRecovered} className="w-full flex items-center justify-center gap-2 bg-forest text-white rounded-lg py-2.5 text-[13px] font-medium">
+            <HeartPulse size={15} /> Mark as recovered
+          </button>
+        )}
         {animal.status !== 'Sold' && (
           <button onClick={() => setShowVaxForm(true)} className="w-full flex items-center justify-center gap-2 bg-forest text-white rounded-lg py-2.5 text-[13px] font-medium">
             <Syringe size={15} /> Log vaccination
