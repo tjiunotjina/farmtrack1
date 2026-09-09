@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Camera } from 'lucide-react';
 import { db, saveLocal } from '../db.js';
 import { TopBar, EarTag, StockTag } from '../components/Shell.jsx';
+import { fileToResizedDataUrl } from '../imageUtils.js';
 
 export default function Finances({ syncStatus, pending, onSyncTap, onSelectAnimal }) {
   const [showForm, setShowForm] = useState(false);
+  const [viewingReceipt, setViewingReceipt] = useState(null);
   const ledger = useLiveQuery(() => db.ledger.filter(l => !l.deleted).reverse().sortBy('date'), [], []);
   const animals = useLiveQuery(() => db.animals.filter(a => !a.deleted).toArray(), [], []);
   const inventory = useLiveQuery(() => db.inventory.filter(i => !i.deleted).toArray(), [], []);
@@ -30,16 +32,23 @@ export default function Finances({ syncStatus, pending, onSyncTap, onSelectAnima
         {ledger.length === 0 && <div className="text-[12px] text-muted text-center pt-8">No entries yet. Tap + to add one.</div>}
         {ledger.map((l) => (
           <div key={l.id} className="bg-white rounded-lg border border-border p-3 flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <div className="text-[13px] text-ink truncate">{l.desc}</div>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-[11px] text-muted">{l.date}</span>
-                {l.animalId && (
-                  <button onClick={() => onSelectAnimal(l.animalId)}>
-                    <EarTag id={l.animalId} size="sm" />
-                  </button>
-                )}
-                {l.inventoryName && <StockTag name={l.inventoryName} size="sm" />}
+            <div className="flex items-center gap-2 min-w-0">
+              {l.receiptImage && (
+                <button onClick={() => setViewingReceipt(l.receiptImage)} className="flex-shrink-0">
+                  <img src={l.receiptImage} alt="Receipt" className="w-9 h-9 rounded-md object-cover border border-border" />
+                </button>
+              )}
+              <div className="min-w-0">
+                <div className="text-[13px] text-ink truncate">{l.desc}</div>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className="text-[11px] text-muted">{l.date}</span>
+                  {l.animalId && (
+                    <button onClick={() => onSelectAnimal(l.animalId)}>
+                      <EarTag id={l.animalId} size="sm" />
+                    </button>
+                  )}
+                  {l.inventoryName && <StockTag name={l.inventoryName} size="sm" />}
+                </div>
               </div>
             </div>
             <span className={`text-[13px] font-medium flex-shrink-0 ${l.type === 'income' ? 'text-forest' : 'text-rust'}`}>
@@ -52,6 +61,14 @@ export default function Finances({ syncStatus, pending, onSyncTap, onSelectAnima
         <Plus size={20} />
       </button>
       {showForm && <AddEntryForm animals={animals} inventory={inventory} onClose={() => setShowForm(false)} />}
+      {viewingReceipt && (
+        <div className="absolute inset-0 bg-ink/80 flex items-center justify-center p-6" onClick={() => setViewingReceipt(null)}>
+          <img src={viewingReceipt} alt="Receipt" className="max-w-full max-h-full rounded-lg" />
+          <button onClick={() => setViewingReceipt(null)} className="absolute top-4 right-4 text-white">
+            <X size={24} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -61,9 +78,18 @@ function AddEntryForm({ animals, inventory, onClose }) {
     desc: '', amount: '', type: 'income', date: new Date().toISOString().slice(0, 10),
     animalId: '', inventoryId: '', stockQty: '',
   });
+  const [receiptImage, setReceiptImage] = useState(null);
+  const fileInputRef = useRef(null);
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
   const selectedItem = inventory.find(i => i.id === form.inventoryId);
+
+  const onReceiptChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const dataUrl = await fileToResizedDataUrl(file);
+    setReceiptImage(dataUrl);
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -78,6 +104,7 @@ function AddEntryForm({ animals, inventory, onClose }) {
       animalId: form.animalId || null,
       inventoryId: form.inventoryId || null,
       inventoryName: selectedItem?.name || null,
+      receiptImage: receiptImage || null,
     });
 
     // Expenses buying stock add to the quantity on hand; income from
@@ -99,6 +126,31 @@ function AddEntryForm({ animals, inventory, onClose }) {
           <button onClick={onClose}><X size={18} className="text-muted" /></button>
         </div>
         <form onSubmit={submit} className="space-y-3">
+          <div>
+            <span className="text-[11px] text-muted">Receipt / invoice photo (optional)</span>
+            {receiptImage ? (
+              <div className="mt-1 relative w-24 h-24">
+                <img src={receiptImage} alt="Receipt" className="w-24 h-24 rounded-lg object-cover border border-border" />
+                <button
+                  type="button"
+                  onClick={() => setReceiptImage(null)}
+                  className="absolute -top-1.5 -right-1.5 bg-ink/70 text-white rounded-full p-0.5"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="mt-1 w-full flex items-center justify-center gap-2 bg-white border border-dashed border-border text-muted rounded-lg py-3 text-[12px] font-medium"
+              >
+                <Camera size={16} /> Attach photo of receipt/invoice
+              </button>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onReceiptChange} />
+          </div>
+
           <Field label="Description" value={form.desc} onChange={set('desc')} required placeholder="e.g. Sold 3 goats" />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Amount (N$)" type="number" value={form.amount} onChange={set('amount')} required />

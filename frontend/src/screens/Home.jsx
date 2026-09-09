@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { AlertTriangle, TrendingUp, TrendingDown, Package, LogOut, Syringe, Users, Plus, X, Phone } from 'lucide-react';
 import { db, saveLocal } from '../db.js';
 import { TopBar, EarTag } from '../components/Shell.jsx';
+import WeatherCard from '../components/WeatherCard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Home({ syncStatus, pending, onSyncTap, onSelectAnimal }) {
@@ -58,6 +59,8 @@ export default function Home({ syncStatus, pending, onSyncTap, onSelectAnimal })
             </div>
           </div>
         </div>
+
+        <WeatherCard />
 
         <div className="bg-white rounded-lg border border-border p-3">
           <div className="flex items-center justify-between mb-2">
