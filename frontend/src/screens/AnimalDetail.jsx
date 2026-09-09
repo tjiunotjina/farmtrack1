@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Syringe, Stethoscope, Check, ClipboardList, Wallet, BadgeDollarSign, HeartPulse, X } from 'lucide-react';
+import { Syringe, Stethoscope, Check, ClipboardList, Wallet, BadgeDollarSign, HeartPulse, Pencil, X } from 'lucide-react';
 import { db, saveLocal } from '../db.js';
 import { TopBar, EarTag, StockTag, statusColor } from '../components/Shell.jsx';
 import { calcAge } from '../ageUtils.js';
+import { SPECIES, MONTHS } from '../constants.js';
+import SpeciesIcon from '../components/SpeciesIcon.jsx';
+import ImageSlots from '../components/ImageSlots.jsx';
 
 export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncStatus, pending, onSyncTap }) {
   const [showSaleForm, setShowSaleForm] = useState(false);
   const [showVaxForm, setShowVaxForm] = useState(false);
   const [showTreatmentForm, setShowTreatmentForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const animal = useLiveQuery(() => db.animals.get(animalId), [animalId], null);
   const mother = useLiveQuery(() => animal?.motherId ? db.animals.get(animal.motherId) : null, [animal?.motherId], null);
   const offspring = useLiveQuery(
@@ -60,8 +64,18 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
         )}
 
         <div className="bg-white rounded-lg border border-border p-4">
-          <EarTag id={animal.id} />
-          <div className="font-serif text-xl text-ink mt-2">{animal.breed} {animal.species}</div>
+          <div className="flex items-start justify-between">
+            <EarTag id={animal.id} />
+            {animal.status !== 'Sold' && (
+              <button onClick={() => setShowEditForm(true)} className="text-muted p-1 -mr-1 -mt-1" aria-label="Edit animal details">
+                <Pencil size={16} />
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <SpeciesIcon species={animal.species} size={22} />
+            <div className="font-serif text-xl text-ink">{animal.breed} {animal.species}</div>
+          </div>
           <span className={`inline-block text-[10px] font-medium px-2 py-1 rounded-full mt-2 ${statusColor[animal.status] || 'bg-muted text-white'}`}>
             {animal.status}
           </span>
@@ -224,7 +238,102 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
       {showSaleForm && <SaleForm animal={animal} onClose={() => setShowSaleForm(false)} />}
       {showVaxForm && <VaccinationForm animal={animal} onClose={() => setShowVaxForm(false)} />}
       {showTreatmentForm && <TreatmentForm animal={animal} onClose={() => setShowTreatmentForm(false)} />}
+      {showEditForm && <EditAnimalForm animal={animal} onClose={() => setShowEditForm(false)} />}
     </div>
+  );
+}
+
+function EditAnimalForm({ animal, onClose }) {
+  const [form, setForm] = useState({
+    species: animal.species || 'Cattle',
+    breed: animal.breed || '',
+    sex: animal.sex || 'Female',
+    age: animal.age || '',
+    weight: animal.weight || '',
+    status: animal.status || 'Healthy',
+    brand: animal.brand || '',
+    feed: animal.feed || '',
+    birthMonth: animal.birthMonth || '',
+    birthYear: animal.birthYear || '',
+  });
+  const [images, setImages] = useState(animal.images || []);
+  const currentYear = new Date().getFullYear();
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+  const feedOptions = useLiveQuery(() => db.inventory.filter(i => !i.deleted).toArray(), [], []);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    await saveLocal('animals', {
+      ...animal,
+      ...form,
+      birthYear: form.birthYear ? Number(form.birthYear) : null,
+      images,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="absolute inset-0 bg-ink/40 flex items-end">
+      <div className="w-full bg-parchment rounded-t-2xl p-4 space-y-3 max-h-[90%] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-lg text-ink">Edit {animal.id}</h2>
+          <button onClick={onClose}><X size={18} className="text-muted" /></button>
+        </div>
+        <form onSubmit={submit} className="space-y-3">
+          <ImageSlots images={images} onChange={setImages} />
+          <div className="grid grid-cols-2 gap-3">
+            <EditSelect label="Species" value={form.species} onChange={set('species')} options={SPECIES} />
+            <EditSelect label="Sex" value={form.sex} onChange={set('sex')} options={['Female', 'Male']} />
+          </div>
+          <EditField label="Breed" value={form.breed} onChange={set('breed')} />
+          <div className="grid grid-cols-2 gap-3">
+            <EditSelect label="Birth month" value={form.birthMonth} onChange={set('birthMonth')} options={['', ...MONTHS]} display={(m) => m || 'Unknown'} />
+            <EditSelect
+              label="Birth year" value={form.birthYear} onChange={set('birthYear')}
+              options={['', ...Array.from({ length: 25 }, (_, i) => currentYear - i)]}
+              display={(y) => y || 'Unknown'}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <EditField label="Age (if birth date unknown)" value={form.age} onChange={set('age')} placeholder="e.g. 2y, 3mo" />
+            <EditField label="Weight" value={form.weight} onChange={set('weight')} placeholder="e.g. 210kg" />
+          </div>
+          <EditSelect label="Status" value={form.status} onChange={set('status')} options={['Healthy', 'Vax due', 'Pregnant', 'Sick']} />
+          <EditField label="Stock brand" value={form.brand} onChange={set('brand')} placeholder="e.g. OF/24" />
+          <label className="block">
+            <span className="text-[11px] text-muted">Feed being used</span>
+            <select value={form.feed} onChange={set('feed')} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+              <option value="">Not set</option>
+              {feedOptions.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
+              {form.feed && !feedOptions.some(f => f.name === form.feed) && <option value={form.feed}>{form.feed}</option>}
+            </select>
+          </label>
+          <button type="submit" className="w-full bg-forest text-parchment rounded-lg py-2.5 text-[13px] font-medium mt-2">
+            Save changes
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditField({ label, ...props }) {
+  return (
+    <label className="block">
+      <span className="text-[11px] text-muted">{label}</span>
+      <input {...props} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest" />
+    </label>
+  );
+}
+
+function EditSelect({ label, options, display, ...props }) {
+  return (
+    <label className="block">
+      <span className="text-[11px] text-muted">{label}</span>
+      <select {...props} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+        {options.map(o => <option key={o} value={o}>{display ? display(o) : o}</option>)}
+      </select>
+    </label>
   );
 }
 

@@ -1,4 +1,4 @@
-# Deploying FarmTrack to Netlify
+# Deploying Orutumbo to Netlify
 
 This deploys as **one Netlify site**: the frontend as static files, and the
 whole backend API as a single serverless function, using Netlify's own

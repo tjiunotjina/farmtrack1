@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 216 198.8">
-  <path d="M 93.2,10.9 L 82.6,21.4 L 75.9,59.7 L 62.5,84.6 L 46.3,103.7 L 17.6,122.8 L 10.9,131.4 L 8.0,164.9 L 9.9,182.2 L 23.3,189.8 L 193.6,188.9 L 202.3,186.0 L 207.0,179.3 L 203.2,130.5 L 171.6,107.5 L 155.4,89.3 L 140.1,59.7 L 132.4,20.4 L 124.7,12.8 L 114.2,8.0 Z" fill="#F0D732" stroke="#1a1a1a" stroke-width="4" stroke-linejoin="round"/>
-  <circle cx="82" cy="30" r="5.5" fill="none" stroke="#1a1a1a" stroke-width="3.2"/>
-  <ellipse cx="108" cy="65" rx="30" ry="14" fill="none" stroke="#1a1a1a" stroke-width="3.2"/>
-  <text x="108" y="70.5" font-family="Arial, sans-serif" font-weight="700" font-size="15" fill="#1a1a1a" text-anchor="middle">NAM</text>
-  <text x="108" y="140" font-family="Arial, sans-serif" font-weight="800" font-size="30" fill="#1a1a1a" text-anchor="middle">Farm</text>
-  <text x="108" y="175" font-family="Arial, sans-serif" font-weight="800" font-size="30" fill="#1a1a1a" text-anchor="middle">Track</text>
-</svg>

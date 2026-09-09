@@ -69,7 +69,10 @@ export default function Onboarding() {
         </button>
 
         <p className="text-[11px] text-muted mt-4 text-center">
-          Setting up your farm needs a connection once — after that, FarmTrack works fully offline.
+          Setting up your farm needs a connection once — after that, Orutumbo works fully offline.
+        </p>
+        <p className="text-[10px] text-muted/70 mt-3 text-center">
+          © {new Date().getFullYear()} Tjiunotjina Mureti Tech. All rights reserved.
         </p>
       </div>
     </div>

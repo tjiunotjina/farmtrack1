@@ -1,8 +1,8 @@
 {
-  "name": "farmtrack-netlify",
+  "name": "orutumbo-netlify",
   "private": true,
   "type": "module",
-  "description": "Dependency manifest for netlify/functions — Netlify's build bundles a function by tracing its imports up through node_modules, so these need to be installed at the repo root, not just inside backend/.",
+  "description": "Dependency manifest for netlify/functions \u2014 Netlify's build bundles a function by tracing its imports up through node_modules, so these need to be installed at the repo root, not just inside backend/.",
   "dependencies": {
     "@netlify/blobs": "^8.1.0",
     "bcryptjs": "^2.4.3",
@@ -11,5 +11,6 @@
     "jsonwebtoken": "^9.0.2",
     "nanoid": "^5.0.7",
     "serverless-http": "^3.2.0"
-  }
+  },
+  "author": "Tjiunotjina Mureti Tech"
 }

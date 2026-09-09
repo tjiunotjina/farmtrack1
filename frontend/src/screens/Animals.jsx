@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Search, Plus, X, Baby, Syringe } from 'lucide-react';
+import { Search, Plus, X, Baby, Syringe, Upload, FileUp } from 'lucide-react';
 import { db, saveLocal } from '../db.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { TopBar, EarTag, statusColor } from '../components/Shell.jsx';
 import ImageSlots from '../components/ImageSlots.jsx';
 import { SPECIES, MONTHS } from '../constants.js';
 import { calcAge } from '../ageUtils.js';
+import SpeciesIcon from '../components/SpeciesIcon.jsx';
 
 export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal }) {
   const [query, setQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [prefillMother, setPrefillMother] = useState(null);
   const [showVaxAll, setShowVaxAll] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const animals = useLiveQuery(() => db.animals.filter(a => !a.deleted).toArray(), [], []);
 
   const filtered = animals.filter(a =>
@@ -53,6 +55,12 @@ export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal
         >
           <Syringe size={13} /> Vaccinate all animals
         </button>
+        <button
+          onClick={() => setShowImport(true)}
+          className="w-full flex items-center justify-center gap-2 bg-white border border-leather text-leatherText rounded-lg py-2 text-[12px] font-medium"
+        >
+          <Upload size={13} /> Import herd list
+        </button>
       </div>
       <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-5">
         {topLevel.length === 0 && <div className="text-[12px] text-muted text-center pt-8">No animals yet. Tap + to add one.</div>}
@@ -61,6 +69,7 @@ export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal
           return (
             <div key={species}>
               <div className="flex items-center gap-2 mb-2">
+                <SpeciesIcon species={species} size={15} />
                 <span className="text-[11px] text-muted uppercase tracking-wide">{species}</span>
                 <span className="text-[10px] text-muted bg-white border border-border rounded-full px-1.5 py-0.5">{group.length}</span>
               </div>
@@ -99,6 +108,7 @@ export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal
         />
       )}
       {showVaxAll && <VaccinateAllForm animals={animals} onClose={() => setShowVaxAll(false)} />}
+      {showImport && <ImportHerdForm animals={animals} onClose={() => setShowImport(false)} />}
     </div>
   );
 }
@@ -275,6 +285,112 @@ function VaccinateAllForm({ animals, onClose }) {
             {busy ? 'Applying…' : `Vaccinate ${eligible.length} animals`}
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function ImportHerdForm({ animals, onClose }) {
+  const [text, setText] = useState('');
+  const [defaultSpecies, setDefaultSpecies] = useState('Cattle');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const existingIds = new Set(animals.map(a => a.id));
+
+  // Accepts a NAMLITS-style export or any pasted/typed list: one tag per
+  // line, optionally with species/breed/sex as extra comma- or
+  // tab-separated fields (matches what you get pasting from a spreadsheet).
+  const parsed = text
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(Boolean)
+    .map(line => {
+      const [id, species, breed, sex] = line.split(/\t|,/).map(p => p?.trim());
+      return {
+        id,
+        species: species || defaultSpecies,
+        breed: breed || '',
+        sex: sex && ['Male', 'Female'].includes(sex) ? sex : 'Female',
+      };
+    })
+    .filter(row => row.id);
+
+  const newRows = parsed.filter(row => !existingIds.has(row.id));
+  const duplicateCount = parsed.length - newRows.length;
+
+  const onFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const content = await file.text();
+    setText(content);
+  };
+
+  const submit = async () => {
+    setBusy(true);
+    for (const row of newRows) {
+      await saveLocal('animals', {
+        ...row,
+        sex: row.sex, status: 'Healthy', weight: '', feed: '', motherId: null,
+        brand: '', birthMonth: '', birthYear: null, age: '',
+        images: [], vaccinations: [], treatments: [], lastVax: null,
+      });
+    }
+    setBusy(false);
+    setResult(`Imported ${newRows.length} animal${newRows.length === 1 ? '' : 's'}.`);
+  };
+
+  return (
+    <div className="absolute inset-0 bg-ink/40 flex items-end">
+      <div className="w-full bg-parchment rounded-t-2xl p-4 space-y-3 max-h-[88%] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-lg text-ink">Import herd list</h2>
+          <button onClick={onClose}><X size={18} className="text-muted" /></button>
+        </div>
+
+        {result ? (
+          <div className="space-y-3">
+            <p className="text-[13px] text-ink">{result}</p>
+            <button onClick={onClose} className="w-full bg-forest text-parchment rounded-lg py-2.5 text-[13px] font-medium">Done</button>
+          </div>
+        ) : (
+          <>
+            <p className="text-[12px] text-muted">
+              Paste a list of ear tag IDs (one per line — from a NAMLITS export or anywhere else), or upload a .csv/.txt file.
+              Optionally add species, breed, sex after each ID separated by a comma: <span className="font-mono">NA-2301, Cattle, Nguni, Female</span>
+            </p>
+
+            <Select label="Default species (used when a line doesn't specify one)" value={defaultSpecies} onChange={(e) => setDefaultSpecies(e.target.value)} options={SPECIES} />
+
+            <label className="w-full flex items-center justify-center gap-2 bg-white border border-dashed border-border text-muted rounded-lg py-2.5 text-[12px] font-medium cursor-pointer">
+              <FileUp size={14} /> Upload .csv or .txt file
+              <input type="file" accept=".csv,.txt" onChange={onFileChange} className="hidden" />
+            </label>
+
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={8}
+              placeholder={'NA-2301\nNA-2302, Goat, Boer, Male\nNA-2303'}
+              className="w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest font-mono"
+            />
+
+            {parsed.length > 0 && (
+              <p className="text-[12px] text-muted">
+                {newRows.length} new animal{newRows.length === 1 ? '' : 's'} will be imported.
+                {duplicateCount > 0 && ` ${duplicateCount} already exist and will be skipped.`}
+              </p>
+            )}
+
+            <button
+              onClick={submit}
+              disabled={busy || newRows.length === 0}
+              className="w-full bg-forest text-parchment rounded-lg py-2.5 text-[13px] font-medium disabled:opacity-50"
+            >
+              {busy ? 'Importing…' : `Import ${newRows.length || ''} animal${newRows.length === 1 ? '' : 's'}`}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

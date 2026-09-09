@@ -1,4 +1,4 @@
-# FarmTrack
+# Orutumbo
 
 An offline-first livestock and farm management app, built to be sold to multiple farmers as a product (multi-tenant: every farm's data is isolated).
 
@@ -27,6 +27,7 @@ Every record carries a `farm_id`. Signup creates a `farm` (name, village, owner)
 **Backend:**
 ```bash
 cd backend
+cp .env.example .env   # fill in DATABASE_URL and JWT_SECRET — see DEPLOY_POSTGRES.md
 npm install
 npm run dev        # http://localhost:4000
 ```
@@ -44,7 +45,7 @@ Open the frontend, create a farm account (farm name, village, owner name, email,
 
 This is an MVP-quality build meant to prove the architecture end-to-end, not a production deployment:
 
-- **Database:** the backend currently uses a JSON file (`lowdb`) so it runs anywhere with zero setup. Swap `backend/db.js` for Postgres (or similar) before real users touch it — the route files don't need to change, only that file.
+- **Database:** `backend/` now uses real Postgres (see `DEPLOY_POSTGRES.md`) — no longer the JSON file this note used to warn about.
 - **Auth:** JWT + bcrypt is solid, but there's no password reset, email verification, or multi-user-per-farm roles yet (e.g. owner + workers with different permissions).
 - **Hosting:** needs a real host for the backend (Render, Railway, Fly.io, etc.) and a build/deploy for the frontend (Vercel, Netlify, or bundled into a Capacitor app for app-store distribution).
 - **Photos:** animal photos aren't wired up yet — worth adding since farmers often want a visual record.
