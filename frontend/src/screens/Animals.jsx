@@ -7,6 +7,7 @@ import { TopBar, EarTag, statusColor } from '../components/Shell.jsx';
 import ImageSlots from '../components/ImageSlots.jsx';
 import { SPECIES, MONTHS } from '../constants.js';
 import { calcAge } from '../ageUtils.js';
+import SpeciesIcon from '../components/SpeciesIcon.jsx';
 
 export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal }) {
   const [query, setQuery] = useState('');
@@ -68,6 +69,7 @@ export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal
           return (
             <div key={species}>
               <div className="flex items-center gap-2 mb-2">
+                <SpeciesIcon species={species} size={15} />
                 <span className="text-[11px] text-muted uppercase tracking-wide">{species}</span>
                 <span className="text-[10px] text-muted bg-white border border-border rounded-full px-1.5 py-0.5">{group.length}</span>
               </div>

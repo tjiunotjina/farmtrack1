@@ -141,6 +141,10 @@ export default function Home({ syncStatus, pending, onSyncTap, onSelectAnimal })
             ))}
           </div>
         </div>
+
+        <p className="text-[10px] text-muted/60 text-center pt-2 pb-1">
+          Orutumbo © {new Date().getFullYear()} Tjiunotjina Mureti Tech
+        </p>
       </div>
       {showAddFarmer && <AddFarmerForm onClose={() => setShowAddFarmer(false)} />}
     </div>

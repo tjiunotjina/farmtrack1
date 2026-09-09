@@ -7,11 +7,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'logo-mark.svg'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png'],
       devOptions: { enabled: true, type: 'module' }, // service worker active in `npm run dev` too, for quick testing
       manifest: {
-        name: 'FarmTrack',
-        short_name: 'FarmTrack',
+        name: 'Orutumbo',
+        short_name: 'Orutumbo',
         description: 'Offline-first livestock and farm management',
         theme_color: '#4A5D3A',
         background_color: '#EDE7D8',

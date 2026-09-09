@@ -27,7 +27,7 @@ the server → data still there) before being written up here.
 ## 3. Verify it worked
 
 Check the Render logs for your backend service — you should see
-`FarmTrack API listening on :4000` with no errors right after. Then sign up
+`Orutumbo API listening on :4000` with no errors right after. Then sign up
 for a new farm through your live site and confirm it works. If you want to
 double-check the data is really there, Render's Postgres dashboard has a
 **Shell** / query tool where you can run:

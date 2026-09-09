@@ -5,7 +5,7 @@ import { getStore } from '@netlify/blobs';
 // external database). This replaces backend/db.js's JSON file, which only
 // worked because that server had a real, persistent local disk; a Netlify
 // Function does not.
-const store = () => getStore('farmtrack');
+const store = () => getStore('orutumbo');
 
 export async function getUser(email) {
   return store().get(`users/${email}`, { type: 'json' });

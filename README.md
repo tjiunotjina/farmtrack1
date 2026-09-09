@@ -1,4 +1,4 @@
-# FarmTrack
+# Orutumbo
 
 An offline-first livestock and farm management app, built to be sold to multiple farmers as a product (multi-tenant: every farm's data is isolated).
 

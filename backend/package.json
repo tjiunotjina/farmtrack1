@@ -1,5 +1,5 @@
 {
-  "name": "farmtrack-backend",
+  "name": "orutumbo-backend",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -15,5 +15,6 @@
     "jsonwebtoken": "^9.0.2",
     "nanoid": "^5.0.7",
     "pg": "^8.12.0"
-  }
+  },
+  "author": "Tjiunotjina Mureti Tech"
 }
