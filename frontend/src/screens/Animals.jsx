@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Search, Plus, X, Baby, Syringe, Upload, FileUp } from 'lucide-react';
+import { Search, Plus, X, Baby, Syringe, Upload, FileUp, Wand2 } from 'lucide-react';
 import { db, saveLocal } from '../db.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { TopBar, EarTag, statusColor } from '../components/Shell.jsx';
 import ImageSlots from '../components/ImageSlots.jsx';
-import { SPECIES, MONTHS } from '../constants.js';
+import { SPECIES, MONTHS, BREEDS_BY_SPECIES } from '../constants.js';
 import { calcAge } from '../ageUtils.js';
+import { estimateWeight } from '../weightEstimate.js';
 import SpeciesIcon from '../components/SpeciesIcon.jsx';
 
 export default function Animals({ syncStatus, pending, onSyncTap, onSelectAnimal }) {
@@ -183,7 +184,20 @@ function AddAnimalForm({ animals, prefillMother, onClose }) {
             <Select label="Species" value={form.species} onChange={set('species')} options={SPECIES} />
             <Select label="Sex" value={form.sex} onChange={set('sex')} options={['Female', 'Male']} />
           </div>
-          <Field label="Breed" value={form.breed} onChange={set('breed')} />
+          <label className="block">
+            <span className="text-[11px] text-muted">Breed</span>
+            <select value={form.breed} onChange={set('breed')} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+              <option value="">Not set</option>
+              {(BREEDS_BY_SPECIES[form.species] || ['Other']).map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+            {form.breed === 'Other' && (
+              <input
+                placeholder="Breed name"
+                onChange={(e) => setForm(f => ({ ...f, breed: e.target.value }))}
+                className="mt-2 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+              />
+            )}
+          </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="text-[11px] text-muted">Birth month</span>
@@ -202,7 +216,27 @@ function AddAnimalForm({ animals, prefillMother, onClose }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Age (if birth date unknown)" value={form.age} onChange={set('age')} placeholder="e.g. 2y, 3mo" />
-            <Field label="Weight" value={form.weight} onChange={set('weight')} placeholder="e.g. 210kg" />
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-muted">Weight</span>
+                {form.birthYear && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const est = estimateWeight(form.species, form.breed, form.birthYear, form.birthMonth, MONTHS);
+                      if (est) setForm(f => ({ ...f, weight: `${est}kg (est.)` }));
+                    }}
+                    className="text-[10px] text-teal flex items-center gap-0.5"
+                  >
+                    <Wand2 size={10} /> Estimate
+                  </button>
+                )}
+              </div>
+              <input
+                value={form.weight} onChange={set('weight')} placeholder="e.g. 210kg"
+                className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+              />
+            </div>
           </div>
           <Select label="Status" value={form.status} onChange={set('status')} options={['Healthy', 'Vax due', 'Pregnant', 'Sick']} />
           <Field label="Stock brand" value={form.brand} onChange={set('brand')} placeholder="e.g. OF/24" />

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, COLLECTIONS } from './db.js';
+import { db, COLLECTIONS, applyDailyUsage } from './db.js';
 import { useAuth } from './context/AuthContext.jsx';
 import { runSync, pendingCount } from './sync.js';
 import Onboarding from './screens/Onboarding.jsx';
@@ -35,6 +35,7 @@ function FarmApp() {
 
   useEffect(() => {
     refreshPending();
+    applyDailyUsage(); // catch up any days' worth of stock usage since last launch
     sync(); // sync on launch
     const onOnline = () => sync();
     window.addEventListener('online', onOnline);
