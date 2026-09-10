@@ -50,3 +50,23 @@ export async function softDeleteLocal(collection, id) {
   if (!existing) return;
   await saveLocal(collection, { ...existing, deleted: 1 });
 }
+
+// Deducts each stock item's daily usage rate for every day that's passed
+// since it was last applied — catches up correctly even if the app wasn't
+// opened for several days (e.g. 3 days offline = 3 days' worth deducted at
+// once, not silently skipped or triple-counted). Call once on launch;
+// idempotent within the same day since it only acts when a full day has
+// elapsed, so calling it more than once today is harmless.
+export async function applyDailyUsage() {
+  const today = new Date().toISOString().slice(0, 10);
+  const items = await db.inventory.filter(i => !i.deleted && i.dailyUsage > 0).toArray();
+
+  for (const item of items) {
+    const last = item.lastUsageDate || today;
+    const daysElapsed = Math.floor((new Date(today) - new Date(last)) / 86400000);
+    if (daysElapsed < 1) continue;
+
+    const newQty = Math.max(0, item.qty - daysElapsed * item.dailyUsage);
+    await saveLocal('inventory', { ...item, qty: newQty, lastUsageDate: today });
+  }
+}

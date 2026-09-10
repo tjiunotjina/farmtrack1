@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Syringe, Stethoscope, Check, ClipboardList, Wallet, BadgeDollarSign, HeartPulse, Pencil, X } from 'lucide-react';
+import { Syringe, Stethoscope, Check, ClipboardList, Wallet, BadgeDollarSign, HeartPulse, Pencil, Wand2, X } from 'lucide-react';
 import { db, saveLocal } from '../db.js';
 import { TopBar, EarTag, StockTag, statusColor } from '../components/Shell.jsx';
 import { calcAge } from '../ageUtils.js';
-import { SPECIES, MONTHS } from '../constants.js';
+import { estimateWeight } from '../weightEstimate.js';
+import { SPECIES, MONTHS, BREEDS_BY_SPECIES, VACCINES, CONDITIONS, SYMPTOMS, TREATMENTS_GIVEN } from '../constants.js';
 import SpeciesIcon from '../components/SpeciesIcon.jsx';
 import ImageSlots from '../components/ImageSlots.jsx';
 
@@ -285,7 +286,23 @@ function EditAnimalForm({ animal, onClose }) {
             <EditSelect label="Species" value={form.species} onChange={set('species')} options={SPECIES} />
             <EditSelect label="Sex" value={form.sex} onChange={set('sex')} options={['Female', 'Male']} />
           </div>
-          <EditField label="Breed" value={form.breed} onChange={set('breed')} />
+          <label className="block">
+            <span className="text-[11px] text-muted">Breed</span>
+            <select value={form.breed} onChange={set('breed')} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+              <option value="">Not set</option>
+              {(BREEDS_BY_SPECIES[form.species] || ['Other']).map(b => <option key={b} value={b}>{b}</option>)}
+              {form.breed && !(BREEDS_BY_SPECIES[form.species] || []).includes(form.breed) && (
+                <option value={form.breed}>{form.breed}</option>
+              )}
+            </select>
+            {form.breed === 'Other' && (
+              <input
+                placeholder="Breed name"
+                onChange={(e) => setForm(f => ({ ...f, breed: e.target.value }))}
+                className="mt-2 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+              />
+            )}
+          </label>
           <div className="grid grid-cols-2 gap-3">
             <EditSelect label="Birth month" value={form.birthMonth} onChange={set('birthMonth')} options={['', ...MONTHS]} display={(m) => m || 'Unknown'} />
             <EditSelect
@@ -296,7 +313,27 @@ function EditAnimalForm({ animal, onClose }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <EditField label="Age (if birth date unknown)" value={form.age} onChange={set('age')} placeholder="e.g. 2y, 3mo" />
-            <EditField label="Weight" value={form.weight} onChange={set('weight')} placeholder="e.g. 210kg" />
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-muted">Weight</span>
+                {form.birthYear && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const est = estimateWeight(form.species, form.breed, form.birthYear, form.birthMonth, MONTHS);
+                      if (est) setForm(f => ({ ...f, weight: `${est}kg (est.)` }));
+                    }}
+                    className="text-[10px] text-teal flex items-center gap-0.5"
+                  >
+                    <Wand2 size={10} /> Estimate
+                  </button>
+                )}
+              </div>
+              <input
+                value={form.weight} onChange={set('weight')} placeholder="e.g. 210kg"
+                className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+              />
+            </div>
           </div>
           <EditSelect label="Status" value={form.status} onChange={set('status')} options={['Healthy', 'Vax due', 'Pregnant', 'Sick']} />
           <EditField label="Stock brand" value={form.brand} onChange={set('brand')} placeholder="e.g. OF/24" />
@@ -359,10 +396,18 @@ function VaccinationForm({ animal, onClose }) {
         <form onSubmit={submit} className="space-y-3">
           <label className="block">
             <span className="text-[11px] text-muted">Vaccine name</span>
-            <input
-              value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. Clostridial (Multivax P Plus)"
-              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
-            />
+            <select value={VACCINES.includes(name) ? name : (name ? 'Other' : '')} onChange={(e) => setName(e.target.value === 'Other' ? '' : e.target.value)} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+              <option value="">Select a vaccine</option>
+              {VACCINES.map(v => <option key={v} value={v}>{v}</option>)}
+            </select>
+            {(name === '' || !VACCINES.includes(name)) && (
+              <input
+                value={VACCINES.includes(name) ? '' : name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Vaccine name"
+                className="mt-2 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+              />
+            )}
           </label>
           <label className="block">
             <span className="text-[11px] text-muted">Date</span>
@@ -382,6 +427,7 @@ function VaccinationForm({ animal, onClose }) {
 
 function TreatmentForm({ animal, onClose }) {
   const [condition, setCondition] = useState('');
+  const [symptom, setSymptom] = useState('');
   const [treatment, setTreatment] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [recovered, setRecovered] = useState(false);
@@ -389,7 +435,8 @@ function TreatmentForm({ animal, onClose }) {
   const submit = async (e) => {
     e.preventDefault();
     if (!condition) return;
-    const treatments = [...(animal.treatments || []), { condition, treatment, date }];
+    const fullCondition = symptom ? `${condition} (${symptom})` : condition;
+    const treatments = [...(animal.treatments || []), { condition: fullCondition, treatment, date }];
     await saveLocal('animals', { ...animal, treatments, status: recovered ? 'Healthy' : 'Sick' });
     onClose();
   };
@@ -403,18 +450,49 @@ function TreatmentForm({ animal, onClose }) {
         </div>
         <form onSubmit={submit} className="space-y-3">
           <label className="block">
-            <span className="text-[11px] text-muted">Condition / symptom</span>
-            <input
-              value={condition} onChange={(e) => setCondition(e.target.value)} required placeholder="e.g. Foot rot, bloat, coughing"
-              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
-            />
+            <span className="text-[11px] text-muted">Condition</span>
+            <select value={CONDITIONS.includes(condition) ? condition : (condition ? 'Other' : '')} onChange={(e) => setCondition(e.target.value === 'Other' ? '' : e.target.value)} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+              <option value="">Select a condition</option>
+              {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {(condition === '' || !CONDITIONS.includes(condition)) && (
+              <input
+                value={CONDITIONS.includes(condition) ? '' : condition}
+                onChange={(e) => setCondition(e.target.value)}
+                placeholder="Condition"
+                className="mt-2 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+              />
+            )}
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">Symptom (optional)</span>
+            <select value={SYMPTOMS.includes(symptom) ? symptom : (symptom ? 'Other' : '')} onChange={(e) => setSymptom(e.target.value === 'Other' ? '' : e.target.value)} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+              <option value="">None</option>
+              {SYMPTOMS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            {symptom === 'Other' || (symptom !== '' && !SYMPTOMS.includes(symptom)) ? (
+              <input
+                value={SYMPTOMS.includes(symptom) ? '' : symptom}
+                onChange={(e) => setSymptom(e.target.value)}
+                placeholder="Symptom"
+                className="mt-2 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+              />
+            ) : null}
           </label>
           <label className="block">
             <span className="text-[11px] text-muted">Treatment given (optional)</span>
-            <input
-              value={treatment} onChange={(e) => setTreatment(e.target.value)} placeholder="e.g. Terramycin injection"
-              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
-            />
+            <select value={TREATMENTS_GIVEN.includes(treatment) ? treatment : (treatment ? 'Other' : '')} onChange={(e) => setTreatment(e.target.value === 'Other' ? '' : e.target.value)} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+              <option value="">None</option>
+              {TREATMENTS_GIVEN.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            {treatment === 'Other' || (treatment !== '' && !TREATMENTS_GIVEN.includes(treatment)) ? (
+              <input
+                value={TREATMENTS_GIVEN.includes(treatment) ? '' : treatment}
+                onChange={(e) => setTreatment(e.target.value)}
+                placeholder="Treatment given"
+                className="mt-2 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+              />
+            ) : null}
           </label>
           <label className="block">
             <span className="text-[11px] text-muted">Date</span>
