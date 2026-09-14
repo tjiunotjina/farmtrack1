@@ -2,8 +2,10 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { initDb } from './db.js';
+import { initBillingSchema, seedPlans } from './billing.js';
 import authRoutes from './routes/auth.js';
 import syncRoutes from './routes/sync.js';
+import billingRoutes from './routes/billing.js';
 import registerResourceRoutes from './routes/resources.js';
 
 const app = express();
@@ -11,9 +13,12 @@ app.use(cors());
 app.use(express.json());
 
 await initDb();
+await initBillingSchema();
+await seedPlans();
 
 app.use('/api/auth', authRoutes);
 app.use('/api/sync', syncRoutes);
+app.use('/api/billing', billingRoutes);
 registerResourceRoutes(app);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));

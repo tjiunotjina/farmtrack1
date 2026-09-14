@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { nanoid } from 'nanoid';
 import { COLLECTIONS, getRecords, getRecord, upsertRecord } from '../db.js';
+import { isWithinLimit, LIMITED_COLLECTIONS } from '../billing.js';
 import { requireAuth } from '../middleware/auth.js';
 
 function makeRouter(collection) {
@@ -18,6 +19,19 @@ function makeRouter(collection) {
 
   router.post('/', async (req, res, next) => {
     try {
+      const limitKey = LIMITED_COLLECTIONS[collection];
+      if (limitKey) {
+        const current = await getRecords(req.user.farmId, collection);
+        const ok = await isWithinLimit(req.user.farmId, limitKey, current.length);
+        if (!ok) {
+          return res.status(402).json({
+            error: `Your plan's limit for ${collection} has been reached. Upgrade to add more.`,
+            code: 'LIMIT_REACHED',
+            feature: limitKey,
+          });
+        }
+      }
+
       const record = {
         id: nanoid(10),
         updated_at: new Date().toISOString(),
