@@ -15,6 +15,7 @@ export async function runSync(token, onStatusChange) {
 
   try {
     let pushedCount = 0;
+    const limitExceeded = [];
 
     for (const collection of COLLECTIONS) {
       const dirty = await db.table(collection).where('dirty').equals(1).toArray();
@@ -23,14 +24,26 @@ export async function runSync(token, onStatusChange) {
       const { applied } = await api.syncPush(token, collection, dirty);
       pushedCount += applied.length;
 
-      // Clear the dirty flag on everything the server accepted.
+      // Only 'created'/'updated' actually landed on the server — clearing
+      // dirty for those is correct. A record marked 'limit_exceeded' was
+      // NOT persisted server-side (this app is offline-first, so the add
+      // already happened locally before the plan limit could be checked);
+      // clearing its dirty flag would make it look synced when it was
+      // silently dropped. Leave it dirty and surface it instead, so the
+      // farmer finds out rather than quietly losing the record.
       await db.transaction('rw', db.table(collection), async () => {
-        for (const { id } of applied) {
-          const rec = await db.table(collection).get(id);
+        for (const item of applied) {
+          if (item.status === 'limit_exceeded') {
+            limitExceeded.push({ collection, id: item.id });
+            continue;
+          }
+          const rec = await db.table(collection).get(item.id);
           if (rec) await db.table(collection).put({ ...rec, dirty: 0 });
         }
       });
     }
+
+    await setMeta('limitExceeded', limitExceeded);
 
     const lastSync = (await getMeta('lastSync')) || new Date(0).toISOString();
     const pulled = await api.syncPull(token, lastSync);
@@ -44,7 +57,7 @@ export async function runSync(token, onStatusChange) {
 
     await setMeta('lastSync', pulled.server_time);
     onStatusChange?.('synced');
-    return { ok: true, pushedCount, pulledCount: Object.values(pulled).flat().length };
+    return { ok: true, pushedCount, pulledCount: Object.values(pulled).flat().length, limitExceeded };
   } catch (err) {
     onStatusChange?.('error');
     return { ok: false, error: err.message };

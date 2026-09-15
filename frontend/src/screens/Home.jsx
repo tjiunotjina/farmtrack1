@@ -4,9 +4,10 @@ import { AlertTriangle, TrendingUp, TrendingDown, Package, LogOut, Syringe, User
 import { db, saveLocal } from '../db.js';
 import { TopBar, EarTag } from '../components/Shell.jsx';
 import WeatherCard from '../components/WeatherCard.jsx';
+import BillingCard from '../components/BillingCard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
-export default function Home({ syncStatus, pending, onSyncTap, onSelectAnimal }) {
+export default function Home({ syncStatus, pending, onSyncTap, onSelectAnimal, onOpenBilling }) {
   const { session, logout } = useAuth();
   const [showAddFarmer, setShowAddFarmer] = useState(false);
   const animals = useLiveQuery(() => db.animals.filter(a => !a.deleted).toArray(), [], []);
@@ -61,6 +62,7 @@ export default function Home({ syncStatus, pending, onSyncTap, onSelectAnimal })
         </div>
 
         <WeatherCard />
+        <BillingCard onOpen={onOpenBilling} />
 
         <div className="bg-white rounded-lg border border-border p-3">
           <div className="flex items-center justify-between mb-2">

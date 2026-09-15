@@ -15,7 +15,12 @@ async function request(path, { method = 'GET', body, token } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  if (!res.ok) {
+    const err = new Error(data.error || `Request failed (${res.status})`);
+    err.code = data.code; // e.g. 'LIMIT_REACHED' — lets callers branch without string-matching messages
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 
@@ -26,4 +31,10 @@ export const api = {
     request('/api/sync/push', { method: 'POST', body: { collection, records }, token }),
   syncPull: (token, since) =>
     request(`/api/sync/pull?since=${encodeURIComponent(since || '')}`, { token }),
+  getPlans: () => request('/api/billing/plans'),
+  getBillingStatus: (token) => request('/api/billing', { token }),
+  checkout: (token, planSlug, billingCycle) =>
+    request('/api/billing/checkout', { method: 'POST', body: { planSlug, billingCycle }, token }),
+  cancelSubscription: (token, reason) =>
+    request('/api/billing/cancel', { method: 'POST', body: { reason }, token }),
 };
