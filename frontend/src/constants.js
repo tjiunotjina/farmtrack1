@@ -51,3 +51,17 @@ export const TREATMENTS_GIVEN = [
   'Antibiotic injection', 'Dewormer', 'Anti-inflammatory/Pain relief', 'Wound dressing',
   'Vitamin/Mineral supplement', 'Isolation and rest', 'Vet callout', 'Other',
 ];
+
+export const DEATH_CAUSES = [
+  'Disease/Illness', 'Predator attack', 'Accident/Injury', 'Difficult birth/Stillborn',
+  'Snake bite', 'Poisoning', 'Old age', 'Unknown', 'Other',
+];
+
+export const LOSS_CIRCUMSTANCES = [
+  'Strayed/Wandered off', 'Suspected theft', 'Suspected predator attack', 'Unknown', 'Other',
+];
+
+// Statuses that mean the animal is no longer part of the working herd —
+// used to keep herd counts, bulk actions (like Vaccinate all), and other
+// "active animals" logic consistent everywhere it's needed.
+export const INACTIVE_STATUSES = ['Sold', 'Deceased', 'Lost'];

@@ -6,6 +6,7 @@ import { TopBar, EarTag } from '../components/Shell.jsx';
 import WeatherCard from '../components/WeatherCard.jsx';
 import BillingCard from '../components/BillingCard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { INACTIVE_STATUSES } from '../constants.js';
 
 export default function Home({ syncStatus, pending, onSyncTap, onSelectAnimal, onOpenBilling }) {
   const { session, logout } = useAuth();
@@ -16,7 +17,7 @@ export default function Home({ syncStatus, pending, onSyncTap, onSelectAnimal, o
   const tasks = useLiveQuery(() => db.tasks.filter(t => !t.deleted && !t.done).toArray(), [], []);
   const farmers = useLiveQuery(() => db.farmers.filter(f => !f.deleted).toArray(), [], []);
 
-  const activeAnimals = animals.filter(a => a.status !== 'Sold');
+  const activeAnimals = animals.filter(a => !INACTIVE_STATUSES.includes(a.status));
   const needsAttention = animals.filter(a => a.status === 'Sick' || a.status === 'Vax due').length;
   const lowStock = inventory.filter(i => i.qty <= i.low).length;
   const income = ledger.filter(l => l.type === 'income').reduce((s, l) => s + l.amount, 0);

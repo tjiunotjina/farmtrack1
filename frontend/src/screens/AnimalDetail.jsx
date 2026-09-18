@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Syringe, Stethoscope, Check, ClipboardList, Wallet, BadgeDollarSign, HeartPulse, Pencil, Wand2, X } from 'lucide-react';
+import { Syringe, Stethoscope, Check, ClipboardList, Wallet, BadgeDollarSign, HeartPulse, Pencil, Wand2, Skull, HelpCircle, X } from 'lucide-react';
 import { db, saveLocal } from '../db.js';
 import { TopBar, EarTag, StockTag, statusColor } from '../components/Shell.jsx';
 import { calcAge } from '../ageUtils.js';
 import { estimateWeight } from '../weightEstimate.js';
-import { SPECIES, MONTHS, BREEDS_BY_SPECIES, VACCINES, CONDITIONS, SYMPTOMS, TREATMENTS_GIVEN } from '../constants.js';
+import { SPECIES, MONTHS, BREEDS_BY_SPECIES, VACCINES, CONDITIONS, SYMPTOMS, TREATMENTS_GIVEN, DEATH_CAUSES, LOSS_CIRCUMSTANCES, INACTIVE_STATUSES } from '../constants.js';
 import SpeciesIcon from '../components/SpeciesIcon.jsx';
 import ImageSlots from '../components/ImageSlots.jsx';
 
@@ -14,6 +14,8 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
   const [showVaxForm, setShowVaxForm] = useState(false);
   const [showTreatmentForm, setShowTreatmentForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeathForm, setShowDeathForm] = useState(false);
+  const [showLostForm, setShowLostForm] = useState(false);
   const animal = useLiveQuery(() => db.animals.get(animalId), [animalId], null);
   const mother = useLiveQuery(() => animal?.motherId ? db.animals.get(animal.motherId) : null, [animal?.motherId], null);
   const offspring = useLiveQuery(
@@ -50,6 +52,10 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
     await saveLocal('animals', { ...animal, treatments, status: 'Healthy' });
   };
 
+  const markFound = async () => {
+    await saveLocal('animals', { ...animal, status: 'Healthy' });
+  };
+
   return (
     <div className="flex flex-col h-full relative">
       <TopBar title="Animal record" onBack={onBack} syncStatus={syncStatus} pending={pending} onSyncTap={onSyncTap} />
@@ -67,7 +73,7 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
         <div className="bg-white rounded-lg border border-border p-4">
           <div className="flex items-start justify-between">
             <EarTag id={animal.id} />
-            {animal.status !== 'Sold' && (
+            {!INACTIVE_STATUSES.includes(animal.status) && (
               <button onClick={() => setShowEditForm(true)} className="text-muted p-1 -mr-1 -mt-1" aria-label="Edit animal details">
                 <Pencil size={16} />
               </button>
@@ -91,6 +97,8 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
             ['Stock brand', animal.brand],
             ['Feed', animal.feed],
             ['Last vaccination', animal.lastVax],
+            ...(animal.mortality ? [['Cause of death', animal.mortality.cause], ['Date of death', animal.mortality.date]] : []),
+            ...(animal.lossRecord ? [['Circumstances', animal.lossRecord.circumstance], ['Date lost', animal.lossRecord.date]] : []),
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between px-4 py-2.5 text-[13px]">
               <span className="text-muted">{k}</span>
@@ -218,28 +226,164 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
             <HeartPulse size={15} /> Mark as recovered
           </button>
         )}
-        {animal.status !== 'Sold' && (
-          <button onClick={() => setShowVaxForm(true)} className="w-full flex items-center justify-center gap-2 bg-forest text-white rounded-lg py-2.5 text-[13px] font-medium">
-            <Syringe size={15} /> Log vaccination
+        {animal.status === 'Lost' && (
+          <button onClick={markFound} className="w-full flex items-center justify-center gap-2 bg-forest text-white rounded-lg py-2.5 text-[13px] font-medium">
+            <HeartPulse size={15} /> Mark as found
           </button>
         )}
-        {animal.status !== 'Sold' && (
-          <button onClick={() => setShowTreatmentForm(true)} className="w-full flex items-center justify-center gap-2 bg-white border border-rust text-rust rounded-lg py-2.5 text-[13px] font-medium">
-            <Stethoscope size={15} /> Log sickness / treatment
-          </button>
+        {!INACTIVE_STATUSES.includes(animal.status) && (
+          <>
+            <button onClick={() => setShowVaxForm(true)} className="w-full flex items-center justify-center gap-2 bg-forest text-white rounded-lg py-2.5 text-[13px] font-medium">
+              <Syringe size={15} /> Log vaccination
+            </button>
+            <button onClick={() => setShowTreatmentForm(true)} className="w-full flex items-center justify-center gap-2 bg-white border border-rust text-rust rounded-lg py-2.5 text-[13px] font-medium">
+              <Stethoscope size={15} /> Log sickness / treatment
+            </button>
+            <button onClick={() => setShowSaleForm(true)} className="w-full flex items-center justify-center gap-2 bg-leather text-white rounded-lg py-2.5 text-[13px] font-medium">
+              <BadgeDollarSign size={15} /> Log sale
+            </button>
+            <button onClick={() => setShowLostForm(true)} className="w-full flex items-center justify-center gap-2 bg-white border border-muted text-muted rounded-lg py-2.5 text-[13px] font-medium">
+              <HelpCircle size={15} /> Log lost / missing
+            </button>
+            <button onClick={() => setShowDeathForm(true)} className="w-full flex items-center justify-center gap-2 bg-ink text-white rounded-lg py-2.5 text-[13px] font-medium">
+              <Skull size={15} /> Log death
+            </button>
+          </>
         )}
-        {animal.status !== 'Sold' ? (
-          <button onClick={() => setShowSaleForm(true)} className="w-full flex items-center justify-center gap-2 bg-leather text-white rounded-lg py-2.5 text-[13px] font-medium">
-            <BadgeDollarSign size={15} /> Log sale
-          </button>
-        ) : (
+        {animal.status === 'Sold' && (
           <div className="text-center text-[12px] text-muted py-1">This animal is marked as sold.</div>
+        )}
+        {animal.status === 'Deceased' && (
+          <div className="text-center text-[12px] text-muted py-1">
+            This animal is marked deceased.{' '}
+            <button onClick={() => saveLocal('animals', { ...animal, status: 'Healthy' })} className="text-teal underline">
+              This was a mistake
+            </button>
+          </div>
         )}
       </div>
       {showSaleForm && <SaleForm animal={animal} onClose={() => setShowSaleForm(false)} />}
       {showVaxForm && <VaccinationForm animal={animal} onClose={() => setShowVaxForm(false)} />}
       {showTreatmentForm && <TreatmentForm animal={animal} onClose={() => setShowTreatmentForm(false)} />}
       {showEditForm && <EditAnimalForm animal={animal} onClose={() => setShowEditForm(false)} />}
+      {showDeathForm && <DeathForm animal={animal} onClose={() => setShowDeathForm(false)} />}
+      {showLostForm && <LostForm animal={animal} onClose={() => setShowLostForm(false)} />}
+    </div>
+  );
+}
+
+function DeathForm({ animal, onClose }) {
+  const [cause, setCause] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [notes, setNotes] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!cause) return;
+    await saveLocal('animals', { ...animal, status: 'Deceased', mortality: { cause, date, notes } });
+    onClose();
+  };
+
+  return (
+    <div className="absolute inset-0 bg-ink/40 flex items-end">
+      <div className="w-full bg-parchment rounded-t-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-lg text-ink">Log death — {animal.id}</h2>
+          <button onClick={onClose}><X size={18} className="text-muted" /></button>
+        </div>
+        <form onSubmit={submit} className="space-y-3">
+          <label className="block">
+            <span className="text-[11px] text-muted">Cause of death</span>
+            <select value={DEATH_CAUSES.includes(cause) ? cause : (cause ? 'Other' : '')} onChange={(e) => setCause(e.target.value === 'Other' ? '' : e.target.value)} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+              <option value="">Select a cause</option>
+              {DEATH_CAUSES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {(cause === '' || !DEATH_CAUSES.includes(cause)) && (
+              <input
+                value={DEATH_CAUSES.includes(cause) ? '' : cause}
+                onChange={(e) => setCause(e.target.value)}
+                placeholder="Cause of death"
+                className="mt-2 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+              />
+            )}
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">Date</span>
+            <input
+              type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">Notes (optional)</span>
+            <input
+              value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any additional detail"
+              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+            />
+          </label>
+          <button type="submit" className="w-full bg-ink text-white rounded-lg py-2.5 text-[13px] font-medium mt-2">
+            Save
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function LostForm({ animal, onClose }) {
+  const [circumstance, setCircumstance] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [notes, setNotes] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!circumstance) return;
+    await saveLocal('animals', { ...animal, status: 'Lost', lossRecord: { circumstance, date, notes } });
+    onClose();
+  };
+
+  return (
+    <div className="absolute inset-0 bg-ink/40 flex items-end">
+      <div className="w-full bg-parchment rounded-t-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-lg text-ink">Log lost / missing — {animal.id}</h2>
+          <button onClick={onClose}><X size={18} className="text-muted" /></button>
+        </div>
+        <form onSubmit={submit} className="space-y-3">
+          <label className="block">
+            <span className="text-[11px] text-muted">Circumstances</span>
+            <select value={LOSS_CIRCUMSTANCES.includes(circumstance) ? circumstance : (circumstance ? 'Other' : '')} onChange={(e) => setCircumstance(e.target.value === 'Other' ? '' : e.target.value)} className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest">
+              <option value="">Select circumstances</option>
+              {LOSS_CIRCUMSTANCES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {(circumstance === '' || !LOSS_CIRCUMSTANCES.includes(circumstance)) && (
+              <input
+                value={LOSS_CIRCUMSTANCES.includes(circumstance) ? '' : circumstance}
+                onChange={(e) => setCircumstance(e.target.value)}
+                placeholder="Circumstances"
+                className="mt-2 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+              />
+            )}
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">Date last seen</span>
+            <input
+              type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">Notes (optional)</span>
+            <input
+              value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any additional detail"
+              className="mt-1 w-full bg-white border border-border rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
+            />
+          </label>
+          <button type="submit" className="w-full bg-muted text-white rounded-lg py-2.5 text-[13px] font-medium mt-2">
+            Save
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

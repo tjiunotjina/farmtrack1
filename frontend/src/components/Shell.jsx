@@ -91,4 +91,6 @@ export const statusColor = {
   Pregnant: 'bg-teal text-parchment',
   Sick: 'bg-rust text-parchment',
   Sold: 'bg-leather text-parchment',
+  Deceased: 'bg-ink text-parchment',
+  Lost: 'bg-muted text-white',
 };

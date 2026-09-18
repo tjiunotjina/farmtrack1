@@ -5,7 +5,7 @@ import { db, saveLocal } from '../db.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { TopBar, EarTag, statusColor } from '../components/Shell.jsx';
 import ImageSlots from '../components/ImageSlots.jsx';
-import { SPECIES, MONTHS, BREEDS_BY_SPECIES } from '../constants.js';
+import { SPECIES, MONTHS, BREEDS_BY_SPECIES, INACTIVE_STATUSES } from '../constants.js';
 import { calcAge } from '../ageUtils.js';
 import { estimateWeight } from '../weightEstimate.js';
 import SpeciesIcon from '../components/SpeciesIcon.jsx';
@@ -281,7 +281,7 @@ function VaccinateAllForm({ animals, onClose }) {
   const [busy, setBusy] = useState(false);
 
   const presentSpecies = [...new Set(animals.map(a => a.species || 'Other'))];
-  const eligible = animals.filter(a => a.status !== 'Sold' && (species === 'All' || (a.species || 'Other') === species));
+  const eligible = animals.filter(a => !INACTIVE_STATUSES.includes(a.status) && (species === 'All' || (a.species || 'Other') === species));
 
   const submit = async (e) => {
     e.preventDefault();
