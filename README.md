@@ -57,3 +57,8 @@ a Claude chat session as a diff or patch, apply them with `git apply` (or ask
 Claude Code, if you have it, to apply the change directly) instead of
 re-downloading and swapping the whole folder — much faster once the project
 is this size.
+
+## Website
+
+`website/` is the public marketing and sign-up site (static, no build step).
+See `DEPLOY_WEBSITE.md`.

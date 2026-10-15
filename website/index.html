@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orutumbo — livestock records that work offline</title>
+<meta name="description" content="Orutumbo is livestock and farm management software built in Namibia. Track animals, vaccinations, feed and sales on your phone, even without signal. Free 30-day trial.">
+<meta name="theme-color" content="#3F5232">
+<meta property="og:title" content="Orutumbo — livestock records that work offline">
+<meta property="og:description" content="Track every animal, vaccination, feed bag and sale on your phone, even without signal.">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Zilla+Slab:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="#top" aria-label="Orutumbo home">
+      <img src="assets/logo-mark.png" alt="" width="40" height="33">
+      <span>Orutumbo</span>
+    </a>
+    <nav aria-label="Main">
+      <a href="#features">What it does</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">Questions</a>
+      <a class="btn btn-small" href="#signup">Start free trial</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="hero wrap">
+  <div class="hero-copy">
+    <h1>Farm records that keep working when the signal doesn't.</h1>
+    <p class="lede">Orutumbo keeps your livestock records — animals, vaccinations, feed, stock and money — on your phone, with or without signal. Built in Namibia.</p>
+    <div class="cta-row">
+      <a class="btn" href="#signup">Start your free 30-day trial</a>
+      <a class="btn btn-line" href="#features">See what it does</a>
+    </div>
+    <p class="fine">No card needed. Works on any phone: add it to your home screen, no app store.</p>
+  </div>
+
+  <div class="hero-demo">
+    <div class="slab">
+      <div class="phone" role="img" aria-label="Preview of the Orutumbo app showing a herd count, two animals and a stock level">
+        <div class="ph-bar">
+          <img src="assets/logo-mark.png" alt="" width="20" height="16">
+          <span class="ph-title">Sample Farm</span>
+          <button type="button" class="pill" id="pill" aria-live="polite">Online · Synced</button>
+        </div>
+        <div class="ph-stats">
+          <div><small>Herd size</small><b>142</b></div>
+          <div><small>Needs attention</small><b class="warn">3</b></div>
+        </div>
+        <div class="ph-row"><span class="tag">NA-2201</span><span>Brahman · Cow · 3y 2mo</span><em class="st ok">Healthy</em></div>
+        <div class="ph-row"><span class="tag">NA-2214</span><span>Nguni · Heifer · 1y 4mo</span><em class="st due">Vax due</em></div>
+        <div class="ph-row"><span>Lucerne hay</span><span>38 bales · 5 a day, automatic</span></div>
+      </div>
+    </div>
+    <p class="demo-note">Tap the green pill to see what happens when the signal drops.</p>
+  </div>
+</section>
+
+<section id="features" class="band">
+  <div class="wrap">
+    <h2>What it keeps track of</h2>
+    <dl class="ledger">
+      <div><dt>Works offline</dt><dd>Everything saves to your phone first and syncs when signal returns. Add animals in the veld and they appear on your other devices later.</dd></div>
+      <div><dt>One record per animal</dt><dd>Ear tag, breed, birth date (age works itself out), photos, mother and offspring, and your stock brand.</dd></div>
+      <div><dt>Health history</dt><dd>Log vaccinations by name, record sickness and treatment, or vaccinate a whole species in one go.</dd></div>
+      <div><dt>Stock and feed</dt><dd>Set a daily feed rate and the stock count drops on its own. You get a low-stock warning before you run out.</dd></div>
+      <div><dt>Money tied to animals</dt><dd>Record sales and expenses against the animal or stock item they belong to, with a photo of the receipt.</dd></div>
+      <div><dt>Losses on the record</dt><dd>Mark animals sold, dead or lost, with the cause, so your herd count stays honest.</dd></div>
+      <div><dt>Start from your list</dt><dd>Paste or upload a list of ear tags and your herd is in the app in minutes.</dd></div>
+      <div><dt>Weather for your farm</dt><dd>Today's forecast, saved so you can still read it when you're offline.</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="wrap how">
+  <h2>Up and running in an afternoon</h2>
+  <ol class="steps">
+    <li><h3>Create your farm account</h3><p>Farm name, your name, email and a password. It takes a minute and needs signal once.</p></li>
+    <li><h3>Add your herd</h3><p>Type animals in as you walk the camp, or upload a list of ear tags to add them in bulk.</p></li>
+    <li><h3>Work in the veld, sync later</h3><p>Everything saves on your phone first. When signal comes back, it syncs without you doing anything.</p></li>
+  </ol>
+</section>
+
+<section id="pricing" class="band">
+  <div class="wrap">
+    <h2>Pricing in Namibian dollars</h2>
+    <div class="toggle" role="group" aria-label="Billing period">
+      <button type="button" data-cycle="monthly" aria-pressed="true">Monthly</button>
+      <button type="button" data-cycle="annual" aria-pressed="false">Yearly, 2 months free</button>
+    </div>
+    <div class="plans" id="plans"></div>
+    <p class="fine">Every plan includes offline use, animal and health records, stock and feed, and finances. New farms start on Standard, free for 30 days.</p>
+  </div>
+</section>
+
+<section id="signup" class="signup">
+  <div class="wrap signup-in">
+    <div class="signup-copy">
+      <h2>Start your 30-day free trial</h2>
+      <p>You get every Standard feature for 30 days. No card needed. After the trial you move to the Free plan automatically, and your records stay exactly as they are.</p>
+      <p>Signing up needs a connection once. After that, Orutumbo works offline.</p>
+    </div>
+    <div class="panel" id="signup-panel">
+      <form id="signup-form" novalidate>
+        <label>Farm name <input name="farmName" required autocomplete="organization" placeholder="e.g. Ondjeva Farm"></label>
+        <label>Village or area <input name="village" autocomplete="address-level2" placeholder="e.g. Okahandja"></label>
+        <label>Your name <input name="ownerName" required autocomplete="name"></label>
+        <label>Email <input name="email" type="email" required autocomplete="email"></label>
+        <label>Password <input name="password" type="password" required minlength="8" autocomplete="new-password"><span class="hint">At least 8 characters</span></label>
+        <label class="hp" aria-hidden="true">Company <input name="company" tabindex="-1" autocomplete="off"></label>
+        <button class="btn btn-block" type="submit" id="signup-btn">Create my farm account</button>
+        <p class="status" id="signup-status" role="status" aria-live="polite"></p>
+      </form>
+      <noscript><p>Signing up needs JavaScript. Open the app directly to create your account.</p></noscript>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="wrap faq">
+  <h2>Questions</h2>
+  <details><summary>Does it really work without signal?</summary><p>Yes. Records are saved on your phone first, so adding an animal, logging a vaccination or recording a sale all work offline. Your changes sync the next time you have signal. You need a connection once, to create your account.</p></details>
+  <details><summary>Do I need to install anything?</summary><p>No app store needed. Open Orutumbo in your phone's browser and choose "Add to Home Screen". On an iPhone, use the Share button in Safari. It then opens like any other app.</p></details>
+  <details><summary>What happens when the 30-day trial ends?</summary><p>Your farm moves to the Free plan, which holds up to 15 animals. Nothing is deleted. If you have more animals than the Free plan allows, your existing records stay, and you can upgrade whenever you want to add more.</p></details>
+  <details><summary>How do I pay for a paid plan?</summary><p>For now, paid plans are activated after we confirm an EFT payment. Choose your plan inside the app and it shows you the payment details.</p></details>
+  <details><summary>Who can see my farm's records?</summary><p>Only people who log in to your farm's account. Every farm's records are kept separate from every other farm's.</p></details>
+  <details><summary>Can my workers use it too?</summary><p>You can keep a list of your farm team in the app, with their roles and phone numbers. Separate logins for each worker are not available yet.</p></details>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <img src="assets/logo-full.png" alt="Orutumbo" width="96" height="110">
+    <div>
+      <p>© <span id="year">2026</span> Tjiunotjina Mureti Tech. All rights reserved.</p>
+      <p class="contact" id="contact"></p>
+    </div>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
