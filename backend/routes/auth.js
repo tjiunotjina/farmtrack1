@@ -2,9 +2,8 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
-import { getUserByEmail, createUser, getFarm, createFarm, updateFarm } from '../db.js';
-import { startTrialSubscription } from '../billing.js';
-import { JWT_SECRET, requireAuth } from '../middleware/auth.js';
+import { db } from '../db.js';
+import { JWT_SECRET } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -47,9 +46,9 @@ router.post('/register', async (req, res, next) => {
       created_at: new Date().toISOString(),
     };
 
-    await createFarm(farm);
-    await createUser(user);
-    await startTrialSubscription(farm.id, { id: nanoid(10) });
+  db.data.farms.push(farm);
+  db.data.users.push(user);
+  await db.write();
 
     res.status(201).json({ token: sign(user), farm, user: { id: user.id, email: user.email, role: user.role } });
   } catch (err) {

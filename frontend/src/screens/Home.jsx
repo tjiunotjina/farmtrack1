@@ -62,9 +62,6 @@ export default function Home({ syncStatus, pending, onSyncTap, onSelectAnimal, o
           </div>
         </div>
 
-        <WeatherCard />
-        <BillingCard onOpen={onOpenBilling} />
-
         <div className="bg-white rounded-lg border border-border p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] text-muted">This month</span>

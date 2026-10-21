@@ -1,48 +1,30 @@
 import { Router } from 'express';
 import { nanoid } from 'nanoid';
-import { COLLECTIONS, getRecords, getRecord, upsertRecord } from '../db.js';
-import { isWithinLimit, LIMITED_COLLECTIONS } from '../billing.js';
+import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
 function makeRouter(collection) {
   const router = Router();
   router.use(requireAuth);
 
-  router.get('/', async (req, res, next) => {
-    try {
-      const items = await getRecords(req.user.farmId, collection);
-      res.json(items);
-    } catch (err) {
-      next(err);
-    }
+  router.get('/', async (req, res) => {
+    await db.read();
+    const items = db.data[collection].filter(r => r.farm_id === req.user.farmId && !r.deleted);
+    res.json(items);
   });
 
-  router.post('/', async (req, res, next) => {
-    try {
-      const limitKey = LIMITED_COLLECTIONS[collection];
-      if (limitKey) {
-        const current = await getRecords(req.user.farmId, collection);
-        const ok = await isWithinLimit(req.user.farmId, limitKey, current.length);
-        if (!ok) {
-          return res.status(402).json({
-            error: `Your plan's limit for ${collection} has been reached. Upgrade to add more.`,
-            code: 'LIMIT_REACHED',
-            feature: limitKey,
-          });
-        }
-      }
-
-      const record = {
-        id: nanoid(10),
-        updated_at: new Date().toISOString(),
-        deleted: false,
-        ...req.body,
-      };
-      await upsertRecord(req.user.farmId, collection, record);
-      res.status(201).json(record);
-    } catch (err) {
-      next(err);
-    }
+  router.post('/', async (req, res) => {
+    await db.read();
+    const record = {
+      id: nanoid(10),
+      farm_id: req.user.farmId,
+      updated_at: new Date().toISOString(),
+      deleted: false,
+      ...req.body,
+    };
+    db.data[collection].push(record);
+    await db.write();
+    res.status(201).json(record);
   });
 
   router.put('/:id', async (req, res, next) => {
