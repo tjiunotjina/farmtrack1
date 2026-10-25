@@ -171,6 +171,7 @@ export async function startTrialSubscription(farmId, { id }) {
      VALUES ($1, $2, 'standard', 'trialing', 'monthly', 'manual', $3, $4, $3, $4)`,
     [id, farmId, now.toISOString(), trialEnd.toISOString()]
   );
+  return { trialEnd };
 }
 
 // The core trial-expiry rule, checked lazily whenever a subscription is
@@ -192,6 +193,31 @@ async function maybeExpireTrial(sub) {
   return rows[0];
 }
 
+// Days a farm keeps its paid plan after the paid period ends, while the
+// customer sorts out the renewal. After this it drops to Free (nothing is
+// deleted). Change it here and the admin totals follow.
+export const GRACE_DAYS = 7;
+
+// A paid subscription does not run forever. Once the period you were paid
+// for is over it becomes 'past_due' (still has its plan, and the app shows
+// "payment overdue"); once the grace days are also over it becomes 'expired'
+// and the farm is on Free. Paying again (see accounting.recordPayment)
+// reactivates it. Like trial expiry, this is checked lazily on read.
+async function maybeLapseSubscription(sub) {
+  if (!['active', 'past_due'].includes(sub.status) || !sub.current_period_end) return sub;
+  const end = new Date(sub.current_period_end).getTime();
+  const now = Date.now();
+  let next = null;
+  if (now > end + GRACE_DAYS * 86400000) next = 'expired';
+  else if (now > end && sub.status === 'active') next = 'past_due';
+  if (!next) return sub;
+  const { rows } = await pool.query(
+    `UPDATE subscriptions SET status = $2, updated_at = now() WHERE id = $1 RETURNING *`,
+    [sub.id, next]
+  );
+  return rows[0];
+}
+
 /**
  * The one function the rest of the app should call to find out what a
  * farm is currently entitled to. Always returns a usable plan — if a farm
@@ -206,6 +232,7 @@ export async function getEffectivePlan(farmId) {
     return { subscription: null, plan: free, features: await planFeatureMap('free') };
   }
   sub = await maybeExpireTrial(sub);
+  sub = await maybeLapseSubscription(sub);
   const effectivePlanId = ['trialing', 'active', 'past_due'].includes(sub.status) ? sub.plan_id : 'free';
   const plan = await getPlan(effectivePlanId);
   return { subscription: sub, plan, features: await planFeatureMap(effectivePlanId) };

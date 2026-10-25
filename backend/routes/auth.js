@@ -4,6 +4,9 @@ import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
 import { getUserByEmail, createUser, getFarm, createFarm, updateFarm } from '../db.js';
 import { startTrialSubscription } from '../billing.js';
+import { assignCustomerNumber } from '../accounting.js';
+import { queueMail } from '../mail/index.js';
+import { welcomeEmail } from '../mail/templates.js';
 import { JWT_SECRET, requireAuth } from '../middleware/auth.js';
 
 const router = Router();
@@ -49,7 +52,26 @@ router.post('/register', async (req, res, next) => {
 
     await createFarm(farm);
     await createUser(user);
-    await startTrialSubscription(farm.id, { id: nanoid(10) });
+    const { trialEnd } = await startTrialSubscription(farm.id, { id: nanoid(10) });
+
+    // The customer number is nice to have in the response, but the signup has
+    // already succeeded by now, so a failure here must not undo it. Startup
+    // backfills any farm that is still missing a number.
+    try {
+      farm.customer_number = await assignCustomerNumber(farm.id);
+    } catch (err) {
+      console.error('Could not assign a customer number:', err.message);
+    }
+    if (farm.customer_number) {
+      // Fire-and-forget: the email never delays or fails the signup.
+      queueMail({
+        to: user.email, toName: ownerName, farmId: farm.id, template: 'welcome',
+        ...welcomeEmail({
+          ownerName, farmName, customerNumber: farm.customer_number, trialEnd,
+          appUrl: process.env.APP_URL, supportEmail: process.env.SUPPORT_EMAIL,
+        }),
+      });
+    }
 
     res.status(201).json({ token: sign(user), farm, user: { id: user.id, email: user.email, role: user.role } });
   } catch (err) {

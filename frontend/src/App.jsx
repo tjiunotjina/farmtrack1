@@ -11,6 +11,7 @@ import Inventory from './screens/Inventory.jsx';
 import Finances from './screens/Finances.jsx';
 import Tasks from './screens/Tasks.jsx';
 import Pricing from './screens/Pricing.jsx';
+import Account from './screens/Account.jsx';
 import { BottomNav } from './components/Shell.jsx';
 import { AlertTriangle } from 'lucide-react';
 
@@ -25,7 +26,7 @@ function FarmApp() {
   const { session } = useAuth();
   const [tab, setTab] = useState('home');
   const [selectedAnimalId, setSelectedAnimalId] = useState(null);
-  const [showBilling, setShowBilling] = useState(false);
+  const [billingView, setBillingView] = useState(null); // null | 'account' | 'pricing'
   const [syncStatus, setSyncStatus] = useState('idle');
   const [pending, setPending] = useState(0);
   const [limitExceededCount, setLimitExceededCount] = useState(0);
@@ -87,10 +88,12 @@ function FarmApp() {
         {...shared}
       />
     );
-  } else if (showBilling) {
-    screen = <Pricing onBack={() => setShowBilling(false)} {...shared} />;
+  } else if (billingView === 'account') {
+    screen = <Account onBack={() => setBillingView(null)} onChangePlan={() => setBillingView('pricing')} {...shared} />;
+  } else if (billingView === 'pricing') {
+    screen = <Pricing onBack={() => setBillingView('account')} onViewAccount={() => setBillingView('account')} {...shared} />;
   } else if (tab === 'home') {
-    screen = <Home {...shared} onOpenBilling={() => setShowBilling(true)} />;
+    screen = <Home {...shared} onOpenBilling={() => setBillingView('account')} />;
   } else if (tab === 'animals') {
     screen = <Animals {...shared} />;
   } else if (tab === 'inventory') {
@@ -104,9 +107,9 @@ function FarmApp() {
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-border py-6 font-sans">
       <div className="w-full max-w-[420px] sm:h-[720px] sm:rounded-[32px] sm:border-[6px] border-ink bg-parchment shadow-2xl overflow-hidden flex flex-col relative">
-        {limitExceededCount > 0 && !showBilling && (
+        {limitExceededCount > 0 && !billingView && (
           <button
-            onClick={() => setShowBilling(true)}
+            onClick={() => setBillingView('pricing')}
             className="flex items-center gap-2 bg-rust/10 border-b border-rust/30 text-rust px-4 py-2 text-[11px] font-medium text-left"
           >
             <AlertTriangle size={13} className="flex-shrink-0" />
@@ -114,7 +117,7 @@ function FarmApp() {
           </button>
         )}
         <div className="flex-1 overflow-hidden relative">{screen}</div>
-        {!selectedAnimalId && !showBilling && <BottomNav tab={tab} setTab={setTab} />}
+        {!selectedAnimalId && !billingView && <BottomNav tab={tab} setTab={setTab} />}
       </div>
     </div>
   );

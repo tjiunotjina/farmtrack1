@@ -62,3 +62,7 @@ is this size.
 
 `website/` is the public marketing and sign-up site (static, no build step).
 See `DEPLOY_WEBSITE.md`.
+
+## Customer numbers, email, client area, accounting
+
+See `DEPLOY_EMAIL_ACCOUNTING.md`.

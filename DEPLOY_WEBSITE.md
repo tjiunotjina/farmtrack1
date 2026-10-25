@@ -58,3 +58,7 @@ to a minute. The form tells people this while they wait.
 - **What it advertises.** The site only mentions things the app does today.
   The plans also list reports, crop management and data export, which are
   not built yet, so they are left off. Add them to the site when they exist.
+
+## The admin page
+
+`website/admin/` is your accounting page (customers, invoices, payments, emails). It deploys with the rest of the site and lives at `/admin/`. See `DEPLOY_EMAIL_ACCOUNTING.md` for the settings it needs.

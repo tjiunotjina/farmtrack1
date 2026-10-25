@@ -35,6 +35,9 @@ export const api = {
   getBillingStatus: (token) => request('/api/billing', { token }),
   checkout: (token, planSlug, billingCycle) =>
     request('/api/billing/checkout', { method: 'POST', body: { planSlug, billingCycle }, token }),
+  getAccount: (token) => request('/api/account', { token }),
+  getInvoices: (token) => request('/api/account/invoices', { token }),
+  getPayments: (token) => request('/api/account/payments', { token }),
   cancelSubscription: (token, reason) =>
     request('/api/billing/cancel', { method: 'POST', body: { reason }, token }),
 };

@@ -6,6 +6,9 @@ import {
 } from '../billing.js';
 import { getProvider } from '../payments/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { createInvoice, accountingErrorHandler } from '../accounting.js';
+import { queueMail } from '../mail/index.js';
+import { invoiceEmail } from '../mail/templates.js';
 
 const router = Router();
 
@@ -50,28 +53,24 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
     if (!plan) return res.status(404).json({ error: 'Plan not found' });
     if (plan.contact_sales) return res.status(400).json({ error: 'This plan requires contacting sales, not self-serve checkout' });
 
-    let sub = await getSubscriptionByFarm(req.user.farmId);
+    const sub = await getSubscriptionByFarm(req.user.farmId);
     const provider = getProvider(sub?.provider || 'manual');
 
-    if (!sub) {
-      const id = nanoid(10);
-      await pool.query(
-        `INSERT INTO subscriptions (id, farm_id, plan_id, status, billing_cycle, provider)
-         VALUES ($1, $2, $3, 'pending', $4, 'manual')`,
-        [id, req.user.farmId, plan.id, billingCycle]
-      );
-      sub = await getSubscriptionByFarm(req.user.farmId);
-    } else {
-      await pool.query(
-        `UPDATE subscriptions SET plan_id = $2, billing_cycle = $3, status = 'pending', updated_at = now() WHERE farm_id = $1`,
-        [req.user.farmId, plan.id, billingCycle]
-      );
+    // The subscription is deliberately NOT changed here. It changes only when
+    // a payment is recorded against the invoice (accounting.recordPayment), so
+    // choosing a plan mid-trial never costs the farm its trial access.
+    const { invoice, created } = await createInvoice({ farmId: req.user.farmId, plan, billingCycle });
+    if (created) {
+      queueMail({
+        to: invoice.bill_to.email, toName: invoice.bill_to.ownerName, farmId: invoice.farm_id, template: 'invoice',
+        ...invoiceEmail({ invoice, appUrl: process.env.APP_URL, eftDetails: process.env.EFT_DETAILS }),
+      });
     }
 
-    const result = await provider.createCheckout({ farm: req.user, plan, billingCycle, subscriptionId: sub.id });
-    res.json(result);
+    const result = await provider.createCheckout({ farm: req.user, plan, billingCycle, subscriptionId: sub?.id, invoice });
+    res.json({ ...result, invoice });
   } catch (err) {
-    next(err);
+    accountingErrorHandler(err, res, next);
   }
 });
 

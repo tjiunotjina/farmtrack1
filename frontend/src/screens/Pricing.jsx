@@ -17,7 +17,7 @@ function formatLimit(v) {
   return v;
 }
 
-export default function Pricing({ onBack, syncStatus, pending, onSyncTap }) {
+export default function Pricing({ onBack, onViewAccount, syncStatus, pending, onSyncTap }) {
   const { session } = useAuth();
   const [plans, setPlans] = useState([]);
   const [cycle, setCycle] = useState('monthly');
@@ -117,7 +117,12 @@ export default function Pricing({ onBack, syncStatus, pending, onSyncTap }) {
                 Continue to payment
               </a>
             ) : (
-              <p className="text-[13px] text-ink leading-relaxed">{checkoutResult.instructions}</p>
+              <p className="text-[13px] text-ink leading-relaxed whitespace-pre-line">{checkoutResult.instructions}</p>
+            )}
+            {checkoutResult.invoice && onViewAccount && (
+              <button onClick={onViewAccount} className="w-full bg-forest text-white rounded-lg py-2.5 text-[13px] font-medium">
+                View invoice {checkoutResult.invoice.invoice_number} in my account
+              </button>
             )}
             <button onClick={() => setCheckoutResult(null)} className="w-full bg-white border border-border rounded-lg py-2.5 text-[13px] font-medium text-ink">
               Close

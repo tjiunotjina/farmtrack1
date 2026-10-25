@@ -43,6 +43,9 @@ export default function Home({ syncStatus, pending, onSyncTap, onSelectAnimal, o
               {session?.farm?.village || 'No village set'}
               {session?.farm?.stock_brand && ` · Brand: ${session.farm.stock_brand}`}
             </div>
+            {session?.farm?.customer_number && (
+              <div className="text-[11px] text-muted font-mono">{session.farm.customer_number}</div>
+            )}
           </div>
           <button onClick={logout} className="text-muted p-1.5" aria-label="Log out">
             <LogOut size={16} />

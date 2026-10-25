@@ -120,7 +120,7 @@
     return null;
   }
 
-  function showDone(d) {
+  function showDone(d, customerNumber) {
     var panel = $('#signup-panel');
     panel.textContent = '';
     var box = document.createElement('div');
@@ -131,11 +131,20 @@
     p1.textContent = 'Welcome, ' + d.ownerName.trim() + '. Your 30-day Standard trial has started.';
     var p2 = document.createElement('p');
     p2.textContent = 'Open Orutumbo and log in with ' + d.email.trim() + ' and the password you just chose.';
+    var pn = null;
+    if (customerNumber) {
+      pn = document.createElement('p');
+      pn.textContent = 'Your customer number is ';
+      var strong = document.createElement('strong');
+      strong.textContent = customerNumber;
+      pn.appendChild(strong);
+      pn.appendChild(document.createTextNode('. We have emailed it to you as well. Quote it whenever you contact us or pay.'));
+    }
     var link = document.createElement('a');
     link.className = 'btn btn-block';
     link.href = cfg.APP_URL;
     link.textContent = 'Open Orutumbo';
-    box.appendChild(h); box.appendChild(p1); box.appendChild(p2); box.appendChild(link);
+    box.appendChild(h); box.appendChild(p1); if (pn) box.appendChild(pn); box.appendChild(p2); box.appendChild(link);
     panel.appendChild(box);
   }
 
@@ -173,7 +182,7 @@
     })
       .then(function (res) {
         return res.json().catch(function () { return {}; }).then(function (body) {
-          if (res.ok) { showDone(data); return; }
+          if (res.ok) { showDone(data, body.farm && body.farm.customer_number); return; }
           if (res.status === 409) setStatus('An account with that email already exists. Open the app and log in instead.', true);
           else setStatus(body.error || 'Something went wrong. Please try again.', true);
         });
