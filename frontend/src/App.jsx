@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, COLLECTIONS, applyDailyUsage, applyDailyUsage, getMeta } from './db.js';
+import { db, COLLECTIONS, applyDailyUsage, getMeta } from './db.js';
 import { useAuth } from './context/AuthContext.jsx';
 import { runSync, pendingCount } from './sync.js';
 import Onboarding from './screens/Onboarding.jsx';

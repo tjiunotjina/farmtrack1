@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Syringe, Stethoscope, Check, ClipboardList, Wallet, BadgeDollarSign, HeartPulse, Pencil, Wand2, Skull, HelpCircle, Pencil, Wand2, X } from 'lucide-react';
+import { Syringe, Stethoscope, Check, ClipboardList, Wallet, BadgeDollarSign, HeartPulse, Pencil, Wand2, Skull, HelpCircle, X } from 'lucide-react';
 import { db, saveLocal } from '../db.js';
 import { TopBar, EarTag, StockTag, statusColor } from '../components/Shell.jsx';
 import { calcAge } from '../ageUtils.js';
@@ -16,7 +16,6 @@ export default function AnimalDetail({ animalId, onBack, onSelectAnimal, syncSta
   const [showEditForm, setShowEditForm] = useState(false);
   const [showDeathForm, setShowDeathForm] = useState(false);
   const [showLostForm, setShowLostForm] = useState(false);
-  const [showEditForm, setShowEditForm] = useState(false);
   const animal = useLiveQuery(() => db.animals.get(animalId), [animalId], null);
   const mother = useLiveQuery(() => animal?.motherId ? db.animals.get(animal.motherId) : null, [animal?.motherId], null);
   const offspring = useLiveQuery(

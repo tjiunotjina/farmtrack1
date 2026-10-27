@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Search, Plus, X, Baby, Syringe, Upload, FileUp, Wand2 } from 'lucide-react';
-import { Search, Plus, X, Baby, Syringe, Upload, FileUp, Wand2 } from 'lucide-react';
-import { db, saveLocal } from '../db.js';
+
 import { useAuth } from '../context/AuthContext.jsx';
 import { TopBar, EarTag, statusColor } from '../components/Shell.jsx';
 import ImageSlots from '../components/ImageSlots.jsx';
-import { SPECIES, MONTHS, BREEDS_BY_SPECIES, INACTIVE_STATUSES, BREEDS_BY_SPECIES } from '../constants.js';
+import { SPECIES, MONTHS, BREEDS_BY_SPECIES, INACTIVE_STATUSES } from '../constants.js';
 import { calcAge } from '../ageUtils.js';
 import { estimateWeight } from '../weightEstimate.js';
 import SpeciesIcon from '../components/SpeciesIcon.jsx';
