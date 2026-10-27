@@ -1,55 +1,108 @@
+
 import { Router } from 'express';
-import { db } from '../db.js';
+import {
+  COLLECTIONS,
+  getRecord,
+  getRecords,
+  upsertRecord,
+} from '../db.js';
+import { getFeatureLimit } from '../billing.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
+
 router.use(requireAuth);
 
-// PUSH: client sends every record it queued while offline (creates,
-// edits, deletes-as-soft-delete). Conflict rule: last-write-wins on
-// `updated_at` — simple, predictable, good enough for single-farm data
-// where two people rarely edit the exact same animal in the same minute.
-router.post('/push', async (req, res) => {
-  const { collection, records } = req.body;
-  if (!COLLECTIONS.includes(collection)) return res.status(400).json({ error: 'Unknown collection' });
-  if (!Array.isArray(records)) return res.status(400).json({ error: 'records must be an array' });
+router.post('/push', async (req, res, next) => {
+  try {
+    const { collection, records } = req.body ?? {};
 
-  await db.read();
-  const store = db.data[collection];
-  const applied = [];
-
-  for (const rec of records) {
-    if (!rec.id) continue;
-    const existingIdx = store.findIndex(r => r.id === rec.id && r.farm_id === req.user.farmId);
-    const incoming = { ...rec, farm_id: req.user.farmId };
-
-    if (existingIdx === -1) {
-      store.push(incoming);
-      applied.push({ id: rec.id, status: 'created' });
-    } else if (new Date(incoming.updated_at) >= new Date(store[existingIdx].updated_at)) {
-      store[existingIdx] = incoming;
-      applied.push({ id: rec.id, status: 'updated' });
-    } else {
-      applied.push({ id: rec.id, status: 'skipped_older' });
+    if (!COLLECTIONS.includes(collection)) {
+      return res.status(400).json({ error: 'Unknown collection' });
     }
-  }
 
-  await db.write();
-  res.json({ applied, server_time: new Date().toISOString() });
+    if (!Array.isArray(records)) {
+      return res.status(400).json({ error: 'records must be an array' });
+    }
+
+    const farmId = req.user.farmId;
+    const applied = [];
+
+    // Count existing, non-deleted animals before processing this batch.
+    // Keep track of new animals accepted during this request as well.
+    let animalCount = null;
+    let animalLimit = null;
+
+    if (collection === 'animals') {
+      const existingAnimals = await getRecords(farmId, 'animals');
+      animalCount = existingAnimals.length;
+      animalLimit = await getFeatureLimit(farmId, 'max_livestock');
+    }
+
+    for (const rec of records) {
+      if (!rec || typeof rec.id !== 'string' || !rec.id.trim()) {
+        continue;
+      }
+
+      // Never allow a client to write to another farm's records.
+      const existing = await getRecord(farmId, collection, rec.id);
+
+      // Do not count a new animal against the limit if it is an update.
+      const isNewAnimal =
+        collection === 'animals' &&
+        !existing &&
+        !rec.deleted;
+
+      if (
+        isNewAnimal &&
+        animalLimit !== null &&
+        animalCount >= animalLimit
+      ) {
+        applied.push({ id: rec.id, status: 'limit_exceeded' });
+        continue;
+      }
+
+      const incoming = {
+        ...rec,
+        id: rec.id,
+        updated_at: rec.updated_at || new Date().toISOString(),
+        deleted: Boolean(rec.deleted),
+      };
+
+      const status = await upsertRecord(farmId, collection, incoming);
+
+      applied.push({ id: rec.id, status });
+
+      if (isNewAnimal && status === 'created') {
+        animalCount += 1;
+      }
+    }
+
+    return res.json({
+      applied,
+      server_time: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
-// PULL: client asks "what changed since I last synced" for each
-// collection, scoped to its own farm only.
 router.get('/pull', async (req, res, next) => {
   try {
-    const since = req.query.since || new Date(0).toISOString();
-
+    const since = req.query.since || null;
     const result = {};
+
     for (const collection of COLLECTIONS) {
-      result[collection] = await getRecords(req.user.farmId, collection, { includeDeleted: true, since });
+      result[collection] = await getRecords(
+        req.user.farmId,
+        collection,
+        { includeDeleted: true, since },
+      );
     }
+
     result.server_time = new Date().toISOString();
-    res.json(result);
+
+    return res.json(result);
   } catch (err) {
     next(err);
   }
